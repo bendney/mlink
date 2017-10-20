@@ -1055,7 +1055,7 @@ void Client::loadUI(const char* file, bool init)
 	    if (logic->initializedClient())
 		break;
 	}
-	String greeting = Engine::config().getValue("client","greeting","Yate ${version} - ${release}");
+	String greeting = Engine::config().getValue("client","greeting","Mlink ${version} - ${release}");
 	Engine::runParams().replaceParams(greeting);
 	if (greeting)
 	    setStatus(greeting);
