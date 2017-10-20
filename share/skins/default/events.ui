@@ -1,7 +1,8 @@
-<ui version="4.0" >
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
  <class>events</class>
- <widget class="QWidget" name="events" >
-  <property name="geometry" >
+ <widget class="QWidget" name="events">
+  <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
@@ -9,202 +10,194 @@
     <height>491</height>
    </rect>
   </property>
-  <property name="windowTitle" >
+  <property name="windowTitle">
    <string>Yate Debug Log</string>
   </property>
-  <property name="windowIcon" >
-   <iconset>events_title.png</iconset>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>events_title.png</normaloff>events_title.png</iconset>
   </property>
-  <property name="_yate_window" stdset="0" >
+  <property name="_yate_window" stdset="0">
    <bool>true</bool>
   </property>
-  <layout class="QVBoxLayout" >
-   <property name="spacing" >
+  <layout class="QVBoxLayout">
+   <property name="spacing">
     <number>2</number>
    </property>
-   <property name="leftMargin" >
+   <property name="leftMargin">
     <number>4</number>
    </property>
-   <property name="topMargin" >
+   <property name="topMargin">
     <number>2</number>
    </property>
-   <property name="rightMargin" >
+   <property name="rightMargin">
     <number>4</number>
    </property>
-   <property name="bottomMargin" >
+   <property name="bottomMargin">
     <number>4</number>
    </property>
    <item>
-    <widget class="QFrame" name="log_events_frame" >
-     <property name="sizePolicy" >
-      <sizepolicy vsizetype="Expanding" hsizetype="Expanding" >
+    <widget class="QFrame" name="log_events_frame">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="styleSheet" >
+     <property name="styleSheet">
       <string>QTextEdit {background:black; color: white; font-family: Courier; }</string>
      </property>
-     <property name="_yate_uiwidget" stdset="0" >
+     <property name="_yate_uiwidget" stdset="0">
       <bool>true</bool>
      </property>
-     <property name="_yate_uiwidget_name" stdset="0" >
+     <property name="_yate_uiwidget_name" stdset="0">
       <string>log_events</string>
      </property>
-     <property name="_yate_uiwidget_class" stdset="0" >
+     <property name="_yate_uiwidget_class" stdset="0">
       <string>CustomTextEdit</string>
      </property>
-     <property name="_yate_uiwidget_params" stdset="0" >
+     <property name="_yate_uiwidget_params" stdset="0">
       <stringlist>
        <string>_yate_debug_widget=true</string>
        <string>property:readOnly=true</string>
       </stringlist>
      </property>
-     <property name="_yate_frame_custom" stdset="0" >
+     <property name="_yate_frame_custom" stdset="0">
       <bool>true</bool>
      </property>
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" >
-     <property name="spacing" >
+    <layout class="QHBoxLayout">
+     <property name="spacing">
       <number>8</number>
      </property>
      <item>
-      <widget class="QGroupBox" name="log_events_debug" >
-       <property name="maximumSize" >
+      <widget class="QGroupBox" name="log_events_debug">
+       <property name="maximumSize">
         <size>
          <width>16777215</width>
          <height>100</height>
         </size>
        </property>
-       <property name="title" >
+       <property name="title">
         <string>Debug Here</string>
        </property>
-       <property name="checkable" >
+       <property name="checkable">
         <bool>true</bool>
        </property>
-       <property name="checked" >
+       <property name="checked">
         <bool>false</bool>
        </property>
-       <property name="_yate_identity" stdset="0" >
+       <property name="_yate_identity" stdset="0">
         <string/>
        </property>
-       <layout class="QVBoxLayout" >
-        <property name="spacing" >
+       <layout class="QVBoxLayout">
+        <property name="spacing">
          <number>4</number>
         </property>
         <item>
-         <layout class="QHBoxLayout" >
-          <property name="spacing" >
+         <layout class="QHBoxLayout">
+          <property name="spacing">
            <number>10</number>
           </property>
-          <property name="leftMargin" >
-           <number>0</number>
-          </property>
-          <property name="topMargin" >
-           <number>0</number>
-          </property>
-          <property name="rightMargin" >
-           <number>0</number>
-          </property>
-          <property name="bottomMargin" >
+          <property name="margin">
            <number>0</number>
           </property>
           <item>
-           <widget class="QCheckBox" name="debug_jingle" >
-            <property name="minimumSize" >
+           <widget class="QCheckBox" name="debug_jingle">
+            <property name="minimumSize">
              <size>
               <width>0</width>
               <height>25</height>
              </size>
             </property>
-            <property name="maximumSize" >
+            <property name="maximumSize">
              <size>
               <width>16777215</width>
               <height>25</height>
              </size>
             </property>
-            <property name="text" >
+            <property name="text">
              <string>JABBER</string>
             </property>
-            <property name="_yate_identity" stdset="0" >
+            <property name="_yate_identity" stdset="0">
              <string>debug:jingle,jabberclient:level 9:level 5</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="debug_sip" >
-            <property name="minimumSize" >
+           <widget class="QCheckBox" name="debug_sip">
+            <property name="minimumSize">
              <size>
               <width>0</width>
               <height>25</height>
              </size>
             </property>
-            <property name="maximumSize" >
+            <property name="maximumSize">
              <size>
               <width>16777215</width>
               <height>25</height>
              </size>
             </property>
-            <property name="text" >
+            <property name="text">
              <string>SIP</string>
             </property>
-            <property name="_yate_identity" stdset="0" >
+            <property name="_yate_identity" stdset="0">
              <string>debug:sip:level 9:level 5</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="debug_h323" >
-            <property name="minimumSize" >
+           <widget class="QCheckBox" name="debug_h323">
+            <property name="minimumSize">
              <size>
               <width>0</width>
               <height>25</height>
              </size>
             </property>
-            <property name="maximumSize" >
+            <property name="maximumSize">
              <size>
               <width>16777215</width>
               <height>25</height>
              </size>
             </property>
-            <property name="text" >
+            <property name="text">
              <string>H.323</string>
             </property>
-            <property name="_yate_identity" stdset="0" >
+            <property name="_yate_identity" stdset="0">
              <string>debug:h323:level 9:level 5</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="debug_iax" >
-            <property name="minimumSize" >
+           <widget class="QCheckBox" name="debug_iax">
+            <property name="minimumSize">
              <size>
               <width>0</width>
               <height>25</height>
              </size>
             </property>
-            <property name="maximumSize" >
+            <property name="maximumSize">
              <size>
               <width>16777215</width>
               <height>25</height>
              </size>
             </property>
-            <property name="text" >
+            <property name="text">
              <string>IAX</string>
             </property>
-            <property name="_yate_identity" stdset="0" >
+            <property name="_yate_identity" stdset="0">
              <string>debug:iax:level 9:level 5</string>
             </property>
            </widget>
           </item>
           <item>
            <spacer>
-            <property name="orientation" >
+            <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
-            <property name="sizeHint" >
+            <property name="sizeHint" stdset="0">
              <size>
               <width>40</width>
               <height>20</height>
@@ -215,29 +208,29 @@
          </layout>
         </item>
         <item>
-         <layout class="QHBoxLayout" >
+         <layout class="QHBoxLayout">
           <item>
-           <widget class="QToolButton" name="debug_sniffer" >
-            <property name="text" >
+           <widget class="QToolButton" name="debug_sniffer">
+            <property name="text">
              <string>Message Sniffer</string>
             </property>
-            <property name="checkable" >
+            <property name="checkable">
              <bool>true</bool>
             </property>
-            <property name="autoRepeat" >
+            <property name="autoRepeat">
              <bool>true</bool>
             </property>
-            <property name="_yate_identity" stdset="0" >
+            <property name="_yate_identity" stdset="0">
              <string>command:sniffer</string>
             </property>
            </widget>
           </item>
           <item>
            <spacer>
-            <property name="orientation" >
+            <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
-            <property name="sizeHint" >
+            <property name="sizeHint" stdset="0">
              <size>
               <width>40</width>
               <height>20</height>
@@ -251,105 +244,19 @@
       </widget>
      </item>
      <item>
-      <layout class="QVBoxLayout" >
-       <property name="spacing" >
+      <layout class="QVBoxLayout">
+       <property name="spacing">
         <number>1</number>
        </property>
        <item>
-        <widget class="QToolButton" name="log_events_clear" >
-         <property name="sizePolicy" >
-          <sizepolicy vsizetype="Fixed" hsizetype="Minimum" >
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="minimumSize" >
-          <size>
-           <width>0</width>
-           <height>24</height>
-          </size>
-         </property>
-         <property name="maximumSize" >
-          <size>
-           <width>16777215</width>
-           <height>24</height>
-          </size>
-         </property>
-         <property name="toolTip" >
-          <string>Clear all calls log</string>
-         </property>
-         <property name="text" >
-          <string>Clear</string>
-         </property>
-         <property name="icon" >
-          <iconset>clear.png</iconset>
-         </property>
-         <property name="toolButtonStyle" >
-          <enum>Qt::ToolButtonTextBesideIcon</enum>
-         </property>
-         <property name="_yate_identity" stdset="0" >
-          <string>clear:log_events</string>
-         </property>
-         <property name="_yate_normal_icon" stdset="0" >
-          <string>clear.png</string>
-         </property>
-         <property name="_yate_pressed_icon" stdset="0" >
-          <string>clear_pressed.png</string>
-         </property>
-         <property name="_yate_hover_icon" stdset="0" >
-          <string>clear_hover.png</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QToolButton" name="button_hide" >
-         <property name="sizePolicy" >
-          <sizepolicy vsizetype="Fixed" hsizetype="Minimum" >
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="minimumSize" >
-          <size>
-           <width>0</width>
-           <height>24</height>
-          </size>
-         </property>
-         <property name="maximumSize" >
-          <size>
-           <width>16777215</width>
-           <height>24</height>
-          </size>
-         </property>
-         <property name="text" >
-          <string>Close</string>
-         </property>
-         <property name="icon" >
-          <iconset>cancel.png</iconset>
-         </property>
-         <property name="toolButtonStyle" >
-          <enum>Qt::ToolButtonTextBesideIcon</enum>
-         </property>
-         <property name="_yate_normal_icon" stdset="0" >
-          <string>cancel.png</string>
-         </property>
-         <property name="_yate_pressed_icon" stdset="0" >
-          <string>cancel_pressed.png</string>
-         </property>
-         <property name="_yate_hover_icon" stdset="0" >
-          <string>cancel_hover.png</string>
-         </property>
-        </widget>
-       </item>
-       <item>
         <spacer>
-         <property name="orientation" >
+         <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
-         <property name="sizeType" >
+         <property name="sizeType">
           <enum>QSizePolicy::Fixed</enum>
          </property>
-         <property name="sizeHint" >
+         <property name="sizeHint" stdset="0">
           <size>
            <width>20</width>
            <height>2</height>
@@ -358,45 +265,90 @@
         </spacer>
        </item>
        <item>
-        <widget class="QToolButton" name="toggle_show_help_2" >
-         <property name="sizePolicy" >
-          <sizepolicy vsizetype="Fixed" hsizetype="Minimum" >
+        <widget class="QToolButton" name="log_events_clear">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
-         <property name="minimumSize" >
+         <property name="minimumSize">
           <size>
            <width>0</width>
            <height>24</height>
           </size>
          </property>
-         <property name="maximumSize" >
+         <property name="maximumSize">
           <size>
            <width>16777215</width>
            <height>24</height>
           </size>
          </property>
-         <property name="toolTip" >
-          <string>Show or hide the Help window</string>
+         <property name="toolTip">
+          <string>Clear all calls log</string>
          </property>
-         <property name="icon" >
-          <iconset>quest.png</iconset>
+         <property name="text">
+          <string>Clear</string>
          </property>
-         <property name="checkable" >
-          <bool>true</bool>
+         <property name="icon">
+          <iconset>
+           <normaloff>clear.png</normaloff>clear.png</iconset>
          </property>
-         <property name="_yate_identity" stdset="0" >
-          <string>showwindow:help:4</string>
+         <property name="toolButtonStyle">
+          <enum>Qt::ToolButtonTextBesideIcon</enum>
          </property>
-         <property name="_yate_normal_icon" stdset="0" >
-          <string>quest.png</string>
+         <property name="_yate_identity" stdset="0">
+          <string>clear:log_events</string>
          </property>
-         <property name="_yate_pressed_icon" stdset="0" >
-          <string>quest_pressed.png</string>
+         <property name="_yate_normal_icon" stdset="0">
+          <string>clear.png</string>
          </property>
-         <property name="_yate_hover_icon" stdset="0" >
-          <string>quest_hover.png</string>
+         <property name="_yate_pressed_icon" stdset="0">
+          <string>clear_pressed.png</string>
+         </property>
+         <property name="_yate_hover_icon" stdset="0">
+          <string>clear_hover.png</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QToolButton" name="button_hide">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>24</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>24</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>Close</string>
+         </property>
+         <property name="icon">
+          <iconset>
+           <normaloff>cancel.png</normaloff>cancel.png</iconset>
+         </property>
+         <property name="toolButtonStyle">
+          <enum>Qt::ToolButtonTextBesideIcon</enum>
+         </property>
+         <property name="_yate_normal_icon" stdset="0">
+          <string>cancel.png</string>
+         </property>
+         <property name="_yate_pressed_icon" stdset="0">
+          <string>cancel_pressed.png</string>
+         </property>
+         <property name="_yate_hover_icon" stdset="0">
+          <string>cancel_hover.png</string>
          </property>
         </widget>
        </item>
