@@ -1,0 +1,712 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>loginwindow</class>
+ <widget class="QWidget" name="loginwindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>340</width>
+    <height>520</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>300</width>
+    <height>520</height>
+   </size>
+  </property>
+  <property name="focusPolicy">
+   <enum>Qt::StrongFocus</enum>
+  </property>
+  <property name="windowTitle">
+   <string comment="VoIP Client">Mlink Client</string>
+  </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>null_team-32.png</normaloff>null_team-32.png</iconset>
+  </property>
+  <property name="toolTip">
+   <string>Mlink Client - Telephony Client</string>
+  </property>
+  <property name="styleSheet">
+   <string>QWidget#mainwindow {
+  background:#f7f5fd;
+}
+
+</string>
+  </property>
+  <property name="_yate_hideonclose" stdset="0">
+   <bool>true</bool>
+  </property>
+  <property name="_yate_window" stdset="0">
+   <bool>true</bool>
+  </property>
+  <layout class="QVBoxLayout">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <property name="leftMargin">
+    <number>2</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>2</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <widget class="QFrame" name="frame">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>150</height>
+      </size>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <widget class="QWidget" name="horizontalLayoutWidget">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>20</y>
+        <width>331</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <item>
+        <spacer name="horizontalSpacer_4">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Fixed</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>60</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QLabel" name="remoteUser">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>80</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>Username:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="acc_username">
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>23</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_6">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Fixed</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>60</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="horizontalLayoutWidget_2">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>60</y>
+        <width>331</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout_3">
+       <item>
+        <spacer name="horizontalSpacer_3">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Fixed</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>60</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QLabel" name="remotePasswd">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>80</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>Password:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="acc_password">
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>23</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_5">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Fixed</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>60</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="horizontalLayoutWidget_3">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>100</y>
+        <width>331</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout_4">
+       <item>
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Fixed</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>60</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QLabel" name="remoteServer">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>80</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>Domain:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="acc_proto_sip_server">
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>23</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Fixed</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>60</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <widget class="QFrame" name="signinframe">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>26</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>40</height>
+      </size>
+     </property>
+     <layout class="QHBoxLayout">
+      <property name="spacing">
+       <number>4</number>
+      </property>
+      <property name="leftMargin">
+       <number>2</number>
+      </property>
+      <property name="topMargin">
+       <number>4</number>
+      </property>
+      <property name="rightMargin">
+       <number>2</number>
+      </property>
+      <property name="bottomMargin">
+       <number>4</number>
+      </property>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_5">
+        <item>
+         <widget class="QToolButton" name="account_register">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>26</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>26</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Sign In</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+  <action name="quit">
+   <property name="icon">
+    <iconset>
+     <normaloff>quit.png</normaloff>quit.png</iconset>
+   </property>
+   <property name="text">
+    <string>Quit</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::QuitRole</enum>
+   </property>
+  </action>
+  <action name="acc_new">
+   <property name="icon">
+    <iconset>
+     <normaloff>addaccount_menu.png</normaloff>addaccount_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>Add account</string>
+   </property>
+  </action>
+  <action name="action_show_accountlist">
+   <property name="icon">
+    <iconset>
+     <normaloff>user_menu.png</normaloff>user_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>Accounts</string>
+   </property>
+  </action>
+  <action name="action_show_settings">
+   <property name="icon">
+    <iconset>
+     <normaloff>configure_menu.png</normaloff>configure_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>Options</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::PreferencesRole</enum>
+   </property>
+  </action>
+  <action name="chatcontact_chat">
+   <property name="icon">
+    <iconset>
+     <normaloff>chat_menu.png</normaloff>chat_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>Chat</string>
+   </property>
+  </action>
+  <action name="chatcontact_subscribe">
+   <property name="text">
+    <string>Request subscription</string>
+   </property>
+  </action>
+  <action name="chatcontact_unsubscribe">
+   <property name="text">
+    <string>Request subscription removal</string>
+   </property>
+  </action>
+  <action name="chatcontact_unsubscribed">
+   <property name="text">
+    <string>Remove subscription</string>
+   </property>
+  </action>
+  <action name="chatcontact_call">
+   <property name="icon">
+    <iconset>
+     <normaloff>phone_menu.png</normaloff>phone_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>Call</string>
+   </property>
+  </action>
+  <action name="chatcontact_new">
+   <property name="icon">
+    <iconset>
+     <normaloff>add_menu.png</normaloff>add_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>Add</string>
+   </property>
+  </action>
+  <action name="chatcontact_edit">
+   <property name="icon">
+    <iconset>
+     <normaloff>edit_menu.png</normaloff>edit_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>Edit</string>
+   </property>
+   <property name="toolTip">
+    <string>Edit contact</string>
+   </property>
+  </action>
+  <action name="chatcontact_del">
+   <property name="icon">
+    <iconset>
+     <normaloff>delete_menu.png</normaloff>delete_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>Remove</string>
+   </property>
+   <property name="toolTip">
+    <string>Remove contact</string>
+   </property>
+  </action>
+  <action name="chatcontact_showoffline">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show offline friends</string>
+   </property>
+   <property name="_yate_identity" stdset="0">
+    <string>setparams:property:chat_contacts:_yate_showofflinecontacts</string>
+   </property>
+  </action>
+  <action name="chatcontact_flatlist">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Flat list</string>
+   </property>
+   <property name="_yate_identity" stdset="0">
+    <string>setparams:property:chat_contacts:_yate_flatlist</string>
+   </property>
+  </action>
+  <action name="setStatusOnline">
+   <property name="icon">
+    <iconset>
+     <normaloff>status_online_menu.png</normaloff>status_online_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>Online</string>
+   </property>
+  </action>
+  <action name="setStatusBusy">
+   <property name="icon">
+    <iconset>
+     <normaloff>status_busy_menu.png</normaloff>status_busy_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>Busy</string>
+   </property>
+  </action>
+  <action name="setStatusAway">
+   <property name="icon">
+    <iconset>
+     <normaloff>status_away_menu.png</normaloff>status_away_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>Away</string>
+   </property>
+  </action>
+  <action name="setStatusXa">
+   <property name="icon">
+    <iconset>
+     <normaloff>status_xa_menu.png</normaloff>status_xa_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>Extended away</string>
+   </property>
+  </action>
+  <action name="setStatusDnd">
+   <property name="icon">
+    <iconset>
+     <normaloff>status_dnd_menu.png</normaloff>status_dnd_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>Do Not Disturb</string>
+   </property>
+  </action>
+  <action name="setStatusOffline">
+   <property name="icon">
+    <iconset>
+     <normaloff>status_offline_menu.png</normaloff>status_offline_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>Offline</string>
+   </property>
+  </action>
+  <action name="joinmuc_wizard">
+   <property name="icon">
+    <iconset>
+     <normaloff>muc_menu.png</normaloff>muc_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>Join chat room</string>
+   </property>
+  </action>
+  <action name="acc_new_wizard">
+   <property name="icon">
+    <iconset>
+     <normaloff>addaccountwiz_menu.png</normaloff>addaccountwiz_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>Add account wizard</string>
+   </property>
+  </action>
+  <action name="messages_show">
+   <property name="icon">
+    <iconset>
+     <normaloff>notif_menu.png</normaloff>notif_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>Show notifications</string>
+   </property>
+   <property name="_yate_menuNoCopy" stdset="0">
+    <bool>true</bool>
+   </property>
+  </action>
+  <action name="chatcontact_info">
+   <property name="icon">
+    <iconset>
+     <normaloff>info_menu.png</normaloff>info_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>Info</string>
+   </property>
+  </action>
+  <action name="toggle_show_events">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>events_menu.png</normaloff>events_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>Debug window</string>
+   </property>
+   <property name="_yate_identity" stdset="0">
+    <string>showwindow:events</string>
+   </property>
+  </action>
+  <action name="chatcontact_hideemptygroups">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Hide empty groups</string>
+   </property>
+   <property name="_yate_identity" stdset="0">
+    <string>setparams:property:chat_contacts:_yate_hideemptygroups</string>
+   </property>
+  </action>
+  <action name="advanced_mode">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Advanced mode</string>
+   </property>
+  </action>
+  <action name="send_file">
+   <property name="icon">
+    <iconset>
+     <normaloff>sendfile_menu.png</normaloff>sendfile_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>Send file</string>
+   </property>
+  </action>
+  <action name="action_show_fileprogress">
+   <property name="icon">
+    <iconset>
+     <normaloff>file_trans_menu.png</normaloff>file_trans_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>File transfer</string>
+   </property>
+  </action>
+  <action name="action_show_archive">
+   <property name="icon">
+    <iconset>
+     <normaloff>archive_menu.png</normaloff>archive_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>Archive</string>
+   </property>
+  </action>
+  <action name="chatcontact_showlog">
+   <property name="icon">
+    <iconset>
+     <normaloff>archive.png</normaloff>archive.png</iconset>
+   </property>
+   <property name="text">
+    <string>Show log</string>
+   </property>
+  </action>
+  <action name="chatroom_new">
+   <property name="icon">
+    <iconset>
+     <normaloff>addchatroom_menu.png</normaloff>addchatroom_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>Add chat room</string>
+   </property>
+  </action>
+  <action name="share_file">
+   <property name="icon">
+    <iconset>
+     <normaloff>sharefile_menu.png</normaloff>sharefile_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>Share Files</string>
+   </property>
+  </action>
+  <action name="shared_file">
+   <property name="icon">
+    <iconset>
+     <normaloff>sharedfile_menu.png</normaloff>sharedfile_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>Shared Files</string>
+   </property>
+  </action>
+  <action name="action_show_accountslist">
+   <property name="icon">
+    <iconset>
+     <normaloff>user_menu.png</normaloff>user_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>User Managerment</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

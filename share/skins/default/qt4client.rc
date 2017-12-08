@@ -25,6 +25,10 @@ visible=true
 mainwindow=true
 description=qt4client.ui
 
+[logwindow]
+enabled=true
+description=login.ui
+
 [settings]
 enabled=yes
 description=settings.ui
@@ -66,6 +70,14 @@ description=account.ui
 [accountlist]
 enabled=true
 description=accountlist.ui
+
+[accounts]
+enabled=true
+description=accounts.ui
+
+[accountslist]
+enabled=true
+description=accountslist.ui
 
 [accountwizard]
 enabled=true

@@ -370,4 +370,57 @@ bool Configuration::save() const
     return false;
 }
 
+bool Configuration::writeBuffer(char *buffer, int length)
+{
+    if (null())
+	return false;
+    FILE *f = ::fopen(c_str(),"w");
+    if (f == NULL) {
+	int err = errno;
+	Debug(DebugWarn,"Failed to save config file '%s' (%d: %s)",
+		c_str(),err,strerror(err));
+	return false;
+    }
+
+    ::fwrite(buffer, length, 1, f);
+    ::fclose(f);
+    return true;
+}
+
+bool Configuration::readBuffer(char * buffer)
+{
+    if (null())
+	return false;
+
+    if (buffer == NULL) {
+	int err = errno;
+	Debug(DebugWarn,"Failed to save config file '%s' (%d: %s)",
+		c_str(),err,strerror(err));
+	return false;
+    }
+
+    bool separ = false;
+    ObjList *ol = m_sections.skipNull();
+    for (;ol;ol=ol->skipNext()) {
+	NamedList *nl = static_cast<NamedList *>(ol->get());
+	if (separ)
+	    ::sprintf(buffer,"%s\n", buffer);
+	else
+	    separ = true;
+	::sprintf(buffer,"%s[%s]\n", buffer, nl->c_str());
+	unsigned int n = nl->length();
+	for (unsigned int i = 0; i < n; i++) {
+	    NamedString *ns = nl->getParam(i);
+	    if (ns) {
+		// add a space after a line that ends with backslash
+		const char* bk = ns->endsWith("\\",false) ? " " : "";
+		::sprintf(buffer,"%s%s=%s%s\n", buffer, ns->name().safe(), ns->safe(), bk);
+	    }
+	}
+    }
+
+    return true;
+
+}
+
 /* vi: set ts=8 sw=4 sts=4 noet: */

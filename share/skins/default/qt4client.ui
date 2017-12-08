@@ -85,11 +85,8 @@
       <addaction name="separator"/>
       <addaction name="action_show_archive"/>
       <addaction name="separator"/>
-      <addaction name="acc_new"/>
-      <addaction name="acc_new_wizard"/>
       <addaction name="separator"/>
       <addaction name="separator"/>
-      <addaction name="advanced_mode"/>
       <addaction name="separator"/>
       <addaction name="quit"/>
      </widget>
@@ -101,10 +98,10 @@
        <bool>true</bool>
       </property>
       <addaction name="action_show_settings"/>
-      <addaction name="action_show_accountlist"/>
       <addaction name="toggle_show_events"/>
       <addaction name="action_show_fileprogress"/>
       <addaction name="messages_show"/>
+      <addaction name="action_show_accountslist"/>
      </widget>
      <widget class="QMenu" name="menuFriends">
       <property name="title">
@@ -3014,6 +3011,15 @@ QTextEdit {
    </property>
    <property name="text">
     <string>Shared Files</string>
+   </property>
+  </action>
+  <action name="action_show_accountslist">
+   <property name="icon">
+    <iconset>
+     <normaloff>user_menu.png</normaloff>user_menu.png</iconset>
+   </property>
+   <property name="text">
+    <string>User Managerment</string>
    </property>
   </action>
   <zorder>menubar</zorder>

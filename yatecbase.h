@@ -2832,6 +2832,8 @@ public:
      */
     virtual bool delAccount(const String& account, Window* wnd = 0)
 	{ return false; }
+    virtual bool delServerAccount(const String& account, Window* wnd = 0)
+	{ return false; }
 
     /**
      * Add/set an account. Login if required
@@ -2841,6 +2843,8 @@ public:
      * @return True on success
      */
     virtual bool updateAccount(const NamedList& account, bool login, bool save)
+	{ return false; }
+    virtual bool loadServerAccount(const NamedList& account, bool login, bool save)
 	{ return false; }
 
     /**
@@ -3363,6 +3367,7 @@ public:
      * @return True on success
      */
     virtual bool delAccount(const String& account, Window* wnd = 0);
+    virtual bool delServerAccount(const String& account, Window* wnd = 0);
 
     /**
      * Add/set an account
@@ -3372,6 +3377,7 @@ public:
      * @return True on success
      */
     virtual bool updateAccount(const NamedList& account, bool login, bool save);
+    virtual bool loadServerAccount(const NamedList& account, bool login, bool save);
 
     /**
      * Login/logout an account
@@ -3814,6 +3820,16 @@ private:
 	const String& replace = String::empty(), bool loaded = false);
     // Add/edit an account
     bool internalEditAccount(bool newAcc, const String* account, NamedList* params, Window* wnd);
+
+    bool editAccounts(const String* account, NamedList* params, Window* wnd);
+    bool newAccounts(const String* account, NamedList* params, Window* wnd);
+    bool saveServerAccount(NamedList* params, Window* wnd);
+    bool editServerAccount(const NamedList& account, bool save,
+	const String& replace = String::empty(), bool loaded = false);
+    bool addServerAccount(const NamedList& account);
+    bool handleLoginAccount(NamedList* params, Window* wnd);
+    bool handleLoginNotify(const String& account, bool registered, const char* reason);
+
     // Handle dialog actions. Return true if handled
     bool handleDialogAction(const String& name, bool& retVal, Window* wnd);
     // Handle chat and contact related actions. Return true if handled
@@ -3873,6 +3889,7 @@ private:
 	const String& inst);
 
     ClientAccountList* m_accounts;       // Accounts list (always valid)
+    ClientAccountList* a_accounts;       // Asterisk accounts list (always valid)
     FtManager* m_ftManager;              // Private file manager
 };
 

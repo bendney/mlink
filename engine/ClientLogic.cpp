@@ -21,6 +21,18 @@
 
 #include "yatecbase.h"
 
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/socket.h>
+
+#define DEFAULT_PROT  8700
+
+typedef struct sharedPacket {
+    int message;
+    char buffer[10240];
+} SHAREDPACKET;
+
 namespace TelEngine {
 
 // A client wizard
@@ -693,6 +705,7 @@ using namespace TelEngine;
 // Windows
 static const String s_wndMain = "mainwindow";           // mainwindow
 static const String s_wndAccount = "account";           // Account edit/add
+static const String s_wndAccounts = "accounts";         // Account edit/add
 static const String s_wndAddrbook = "addrbook";         // Contact edit/add
 static const String s_wndChatContact = "chatcontact";   // Chat contact edit/add
 static const String s_wndMucInvite = "mucinvite";       // MUC invite
@@ -703,6 +716,7 @@ static const String s_wndNotification = "notification"; // Notifications
 static const String s_mainwindowTabs = "mainwindowTabs";
 static const String s_channelList = "channels";
 static const String s_accountList = "accounts";         // Global accounts list
+static const String s_accountsList = "accountss";       // Global accounts list
 static const String s_contactList = "contacts";
 static const String s_logList = "log";
 static const String s_calltoList = "callto";
@@ -776,6 +790,8 @@ static const String s_fileShareRename = "file_share_rename";
 static String s_notSelected = "-none-";
 // Maximum number of call log entries
 static unsigned int s_maxCallHistory = 20;
+// Global socket fd to connect server
+static int socketHandle = 0;
 // Global account status
 ObjList AccountStatus::s_items;
 AccountStatus* AccountStatus::s_current = 0;
@@ -814,6 +830,10 @@ const char* ClientLogic::s_provParams[] = {
     0
 };
 // Common account parameters (protocol independent)
+static const String s_accParameters[] = {
+    "dtmfmode", "qualify", "secret", "grade", ""
+};
+// Common account parameters (protocol independent)
 static const String s_accParams[] = {
     "username", "password", ""
 };
@@ -841,6 +861,7 @@ static const TokenDict s_statusImage[] = {
 };
 // Saved rooms
 static Configuration s_mucRooms;
+static Configuration s_server;                  // Server Accounts
 // Actions from notification area
 enum PrivateNotifAction {
     PrivNotificationOk = 1,
@@ -2790,6 +2811,20 @@ static ClientAccount* selectedAccount(ClientAccountList& accounts, Window* wnd =
     return account ? accounts.findAccount(account) : 0;
 }
 
+// Retrieve the selected account
+static ClientAccount* selectedAccounts(ClientAccountList& accounts, Window* wnd = 0,
+    const String& list = String::empty())
+{
+    String account;
+    if (!Client::valid())
+	return 0;
+    if (!list)
+	Client::self()->getSelect(s_accountsList,account,wnd);
+    else
+	Client::self()->getSelect(list,account,wnd);
+    return account ? accounts.findAccount(account) : 0;
+}
+
 // Retrieve the chat contact
 static ClientContact* selectedChatContact(ClientAccountList& accounts,
     Window* wnd = 0, bool rooms = true)
@@ -4056,9 +4091,11 @@ static bool addTrayIcon(const String& type)
     NamedList* pMenu = new NamedList("menu_" + type);
     pMenu->addParam("item:quit","Quit");
     pMenu->addParam("image:quit",Client::s_skinPath + "quit.png");
+    /*
     pMenu->addParam("item:","");
     pMenu->addParam("item:action_show_mainwindow","Show application");
     pMenu->addParam("image:action_show_mainwindow",Client::s_skinPath + "null_team-32.png");
+    */
     if (prio != Client::TrayIconMain && triggerAction && specific) {
 	pMenu->addParam("item:","");
 	pMenu->addParam("item:" + triggerAction,specific);
@@ -6752,6 +6789,7 @@ DefaultLogic::DefaultLogic(const char* name, int prio)
     m_ftManager(0)
 {
     m_accounts = new ClientAccountList(name,new ClientAccount(NamedList::empty()));
+    a_accounts = new ClientAccountList("a_accounts",new ClientAccount(NamedList::empty()));
     s_accWizard = new AccountWizard(m_accounts);
     s_mucWizard = new JoinMucWizard(m_accounts);
     m_ftManager = new FtManager(m_accounts,"FileTransferManager");
@@ -6771,6 +6809,7 @@ DefaultLogic::~DefaultLogic()
     TelEngine::destruct(s_accWizard);
     TelEngine::destruct(s_mucWizard);
     TelEngine::destruct(m_ftManager);
+    TelEngine::destruct(a_accounts);
     TelEngine::destruct(m_accounts);
 }
 
@@ -6935,6 +6974,18 @@ bool DefaultLogic::action(Window* wnd, const String& name, NamedList* params)
 
     // *** Account management
 
+    if (name == YSTRING("account_new")) {
+	return newAccounts(0, params, wnd);
+    }
+    if (name == YSTRING("account_edit")) {
+	return editAccounts(0, params, wnd);
+    }
+    if (name == YSTRING("acc_save"))
+	return saveServerAccount(params,wnd);
+
+    if (name == YSTRING("account_register"))
+	return handleLoginAccount(params, wnd);
+
     // Create a new account or edit an existing one
     bool newAcc = (name == YSTRING("acc_new"));
     if (newAcc || name == YSTRING("acc_edit") || name == s_accountList)
@@ -7045,11 +7096,13 @@ bool DefaultLogic::action(Window* wnd, const String& name, NamedList* params)
     // Handle show window actions
     if (name.startsWith("action_show_"))
 	Client::self()->setVisible(name.substr(12),true,true);
+#if 0
     if (name.startsWith("action_toggleshow_")) {
 	String wnd = name.substr(18);
 	return wnd && Client::self() &&
 	    Client::self()->setVisible(wnd,!Client::self()->getVisible(wnd),true);
     }
+#endif
     // Help commands
     if (name.startsWith("help:"))
 	return help(name,wnd);
@@ -7422,6 +7475,20 @@ bool DefaultLogic::select(Window* wnd, const String& name, const String& item,
 	NamedList p("");
 	fillAccLoginActive(p,a);
 	fillAccEditActive(p,!item.null() && !Client::self()->getVisible(s_wndAccount));
+	Client::self()->setParams(&p,wnd);
+	return true;
+    }
+
+    if (name == s_accountsList) {
+	if (!Client::valid())
+	    return false;
+	NamedList p("");
+	// don't know why always true here, have false when exiting window,
+	// cause account_del edit show
+	//bool active = Client::self()->getVisible(s_wndAccounts);
+	//const char* tmp = String::boolText(active);
+	p.addParam("active:account_del", "true");
+	p.addParam("active:account_edit", "true");
 	Client::self()->setParams(&p,wnd);
 	return true;
     }
@@ -7842,6 +7909,603 @@ bool DefaultLogic::digitPressed(NamedList& params, Window* wnd)
 	}
     }
     return false;
+}
+
+// Retrieve login account data from UI
+static bool getLogAccount(Window* w, NamedList& p)
+{
+    if (!Client::valid())
+	return false;
+
+    String proto = s_sip;
+    String username;
+    String password;
+    String host;
+
+    Client::self()->getText("acc_username", username, false, w);
+    if (username.null()) {
+	showError(w,"Account username is mandatory");
+	return false;
+    }
+
+    Client::self()->getText("acc_password", password, false, w);
+    if (password.null()) {
+	showError(w,"Account password is mandatory");
+	return false;
+    }
+
+    String prefixPro;
+    prefixPro << "acc_proto_" << getProtoPage(proto) << "_";
+    Client::self()->getText(prefixPro + "domain", host, false, w);
+    if (host.null()) {
+	if (proto == s_jabber) {
+	    showError(w,"Account domain is mandatory for the selected protocol");
+	    return false;
+	}
+	Client::self()->getText(prefixPro + "server", host, false, w);
+	if (host.null()) {
+	    showError(w,"You must enter a domain or server");
+	    return false;
+	}
+    }
+
+    String id;
+    p.assign(DefaultLogic::buildAccountId(id, proto, username, host));
+
+    p.addParam("enabled", String::boolText(true));
+    // Account flags
+    p.addParam("protocol", proto);
+
+    // Assign session key-value
+    p.setParam("username", username);
+    p.setParam("password", password);
+    p.setParam("savepassword", String::boolText(true));
+
+    String prefix = "acc_";
+    // Save account parameters
+    for (const String* par = s_accParams; !par->null(); par++)
+	saveParam(p,prefix,*par,w);
+    for (const String* par = s_accBoolParams; !par->null(); par++)
+	saveCheckParam(p,prefix,*par,w);
+
+    prefix << "proto_" << getProtoPage(proto) << "_";
+    for (const String* par = s_accProtoParams; !par->null(); par++)
+	saveParam(p,prefix,*par,w);
+
+    NamedIterator iter(s_accProtoParamsSel);
+    for (const NamedString* ns = 0; 0 != (ns = iter.get());)
+	saveParam(p,prefix,ns->name(),w);
+    // Options
+    prefix << "opt_";
+    String options;
+    for (ObjList* o = ClientLogic::s_accOptions.skipNull(); o; o = o->skipNext()) {
+	String* opt = static_cast<String*>(o->get());
+	bool checked = false;
+	Client::self()->getCheck(prefix + *opt,checked,w);
+	if (checked)
+	    options.append(*opt,",");
+    }
+    bool reg = false;
+    Client::self()->getCheck(YSTRING("acc_register"),reg,w);
+    if (reg)
+	options.append("register",",");
+    p.setParam("options",options);
+    dumpList(p,"Got account",w);
+
+    return true;
+}
+
+
+// Retrieve account data from UI
+static bool getUiAccount(Window* w, NamedList& p, ClientAccountList& accounts)
+{
+    if (!Client::valid())
+	return false;
+
+    String user;
+
+    Client::self()->getText("username", user, false, w);
+    if (user.null()) {
+	showError(w,"Account username is mandatory");
+	return false;
+    }
+
+    p.assign(user);
+
+    for (const String* par = s_accParameters; !par->null(); par++)
+	saveParam(p, "", *par, w);
+
+    p.setParam("directmedia", "no");
+    p.setParam("context", "from-internal");
+    p.setParam("host", "dynamic");
+    p.setParam("type", "friend");
+
+    return true;
+}
+
+// load an account
+bool DefaultLogic::loadServerAccount(const NamedList& account, bool login, bool save)
+{
+    DDebug(ClientDriver::self(),DebugAll,"Logic(%s) loadServerAccount(%s,%s,%s)",
+	toString().c_str(),account.c_str(),String::boolText(login),String::boolText(save));
+
+    if (!Client::valid() || account.null())
+	return false;
+
+    ClientAccount* loadAccount = 0;
+    bool appendStatus = true;
+
+    loadAccount = a_accounts->findAccount(account, true);
+    if (loadAccount) {
+	Debug(ClientDriver::self(), DebugWarn, "Load an existing account !");
+	return false;
+    }
+
+    // Update account to a_accounts
+    loadAccount = new ClientAccount(account);
+
+    appendStatus = a_accounts->appendAccount(loadAccount);
+    if (appendStatus == false) {
+	Debug(ClientDriver::self(),DebugNote,
+	    "Failed to append duplicate account '%s'", loadAccount->toString().c_str());
+	TelEngine::destruct(loadAccount);
+	return false;
+    }
+
+    // Update account list
+    NamedList p("");
+    p.addParam("check:select", String::boolText(false));
+    p.addParam("account", loadAccount->toString());
+    p.addParam("grade", loadAccount->params().getValue("grade"));
+
+    Client::self()->updateTableRow(s_accountsList, loadAccount->toString(), &p);
+    // Make sure the account is selected in accounts list
+    Client::self()->setSelect(s_accountsList, loadAccount->toString());
+    //Client::self()->setSelect(s_account, s_notSelected);
+
+    TelEngine::destruct(loadAccount);
+
+    return true;
+
+}
+
+// Add an account
+bool DefaultLogic::addServerAccount(const NamedList& account)
+{
+    bool appendStatus = true;
+    ClientAccount* newAccount = 0;
+
+    newAccount = a_accounts->findAccount(account, true);
+    if (newAccount) {
+	TelEngine::destruct(newAccount);
+	Debug(ClientDriver::self(), DebugWarn, "Accuount exsiting in server!");
+	return false;
+    }
+
+    // add account
+    newAccount = new ClientAccount(account);
+    appendStatus = a_accounts->appendAccount(newAccount);
+    if (appendStatus == false) {
+	Debug(ClientDriver::self(),DebugNote,
+		"Failed to append duplicate account '%s'",
+		newAccount->toString().c_str());
+	TelEngine::destruct(newAccount);
+	return false;
+    }
+
+    // Update account list
+    NamedList p("");
+    p.addParam("check:select", String::boolText(false));
+    p.addParam("account", newAccount->toString());
+    p.addParam("grade", newAccount->params().getValue("grade"));
+
+    Client::self()->updateTableRow(s_accountsList, newAccount->toString(), &p);
+    // Make sure the account is selected in accounts list
+    Client::self()->setSelect(s_accountsList, newAccount->toString());
+
+    NamedList* sect = s_server.createSection(newAccount->toString());
+    if (sect != NULL) {
+	*sect = newAccount->m_params;
+    }
+    // Save the account to file
+    //Client::save(Client::s_server);
+
+    SHAREDPACKET inPackets;
+    SHAREDPACKET outPackets;
+
+    memset(&inPackets, 0, sizeof(SHAREDPACKET));
+    memset(&outPackets, 0, sizeof(SHAREDPACKET));
+
+    outPackets.message = 2;
+    s_server.readBuffer(outPackets.buffer);
+
+    send(socketHandle, &outPackets, sizeof(int) + strlen(outPackets.buffer), 0);
+
+    //recv(s_sockfd, &inPackets, sizeof(SHAREDPACKET), 0);
+
+    TelEngine::destruct(newAccount);
+
+    return true;
+}
+
+// edit an account
+bool DefaultLogic::editServerAccount(const NamedList& account, bool save,
+    const String& replace, bool loaded)
+{
+    DDebug(ClientDriver::self(),DebugAll,
+	"ClientLogic(%s)::editServerAccount(%s) save=%u replace=%s loaded=%u\n",
+	toString().c_str(),account.c_str(),save,replace.safe(),loaded);
+
+    bool appendStatus = true;
+    bool changed = true;
+    ClientAccount* origAccount = 0;
+    ClientAccount* newAccount = 0;
+
+    origAccount = a_accounts->findAccount(replace, true);
+    newAccount = a_accounts->findAccount(account, true);
+
+    // Update account
+    if (newAccount == origAccount) {
+	changed = !sameParams(origAccount->params(),account,s_accParameters);
+	if (changed) {
+	    origAccount->m_params.copyParams(account);
+	    //origAccount = 0;
+	}
+    }
+    else {
+	newAccount = new ClientAccount(account);
+
+	appendStatus = a_accounts->appendAccount(newAccount);
+	if (appendStatus == false) {
+	    Debug(ClientDriver::self(),DebugNote,
+		    "Failed to append duplicate account '%s'", newAccount->toString().c_str());
+	    TelEngine::destruct(newAccount);
+	    TelEngine::destruct(origAccount);
+	    return false;
+	}
+    }
+
+    // Update account list
+    NamedList p("");
+    p.addParam("check:select", String::boolText(false));
+    p.addParam("account", newAccount->toString());
+    p.addParam("grade", newAccount->params().getValue("grade"));
+
+    Client::self()->updateTableRow(s_accountsList, newAccount->toString(), &p);
+    // Make sure the account is selected in accounts list
+    Client::self()->setSelect(s_accountsList, newAccount->toString());
+
+
+    s_server.clearSection(origAccount->toString());
+
+    NamedList* sect = s_server.getSection(newAccount->toString());
+    if (sect == NULL) {
+	sect = s_server.createSection(newAccount->toString());
+	if (sect != NULL) {
+	    *sect = newAccount->m_params;
+	}
+    }
+    
+    // Save the account to file
+    //Client::save(Client::s_server);
+    
+    SHAREDPACKET inPackets;
+    SHAREDPACKET outPackets;
+
+    memset(&inPackets, 0, sizeof(SHAREDPACKET));
+    memset(&outPackets, 0, sizeof(SHAREDPACKET));
+
+    outPackets.message = 2;
+    s_server.readBuffer(outPackets.buffer);
+
+    send(socketHandle, &outPackets, sizeof(int) + strlen(outPackets.buffer), 0);
+
+    //recv(s_sockfd, &inPackets, sizeof(SHAREDPACKET), 0);
+
+    TelEngine::destruct(newAccount);
+    TelEngine::destruct(origAccount);
+
+    return true;
+}
+
+// Called when the user wants to delete an existing account
+bool DefaultLogic::delServerAccount(const String& account, Window* wnd)
+{
+    if (!account)
+	return deleteSelectedItem(s_accountsList + ":",wnd);
+
+    ClientAccount* acc = a_accounts->findAccount(account);
+    if (!acc)
+	return false;
+
+    //Client::self()->delTableRow(s_account,account);
+    Client::self()->delTableRow(s_accountsList, account);
+
+    a_accounts->removeAccount(account);
+
+    s_server.clearSection(account.toString());
+
+    //Client::save(Client::s_server);
+  
+    SHAREDPACKET inPackets;
+    SHAREDPACKET outPackets;
+
+    memset(&inPackets, 0, sizeof(SHAREDPACKET));
+    memset(&outPackets, 0, sizeof(SHAREDPACKET));
+
+    outPackets.message = 2;
+    s_server.readBuffer(outPackets.buffer);
+
+    send(socketHandle, &outPackets, sizeof(int) + strlen(outPackets.buffer), 0);
+
+    //recv(s_sockfd, &inPackets, sizeof(SHAREDPACKET), 0);
+
+    return true;
+}
+
+// Called when the user wants to save account data
+bool DefaultLogic::saveServerAccount(NamedList* params, Window* wnd)
+{
+    if (!(Client::valid() && wnd))
+	return false;
+
+    NamedList p("");
+    if (!getUiAccount(wnd,p,*a_accounts))
+	return false;
+
+    const String& replace = wnd ? wnd->context() : String::empty();
+    if (replace) {
+	ClientAccount* edit = a_accounts->findAccount(replace);
+	if (edit) {
+	    ClientAccount* acc = a_accounts->findAccount(p);
+	    /* Show error when edit an account to exsiting account */
+	    if (acc && acc != edit) {
+		showAccDupError(wnd);
+		return false;
+	    }
+	}
+
+	if (!editServerAccount(p, false, replace, false)) {
+	    return false;
+	}
+    } else {
+	if (!addServerAccount(p))
+	    return false;
+    }
+
+    // Hide the window. Save some settings
+    Client::self()->setVisible(wnd->toString(),false);
+
+    return true;
+}
+
+
+// Add/edit an account
+bool DefaultLogic::newAccounts(const String* account, NamedList* params,
+    Window* wnd)
+{
+    if (!Client::valid() || Client::self()->getVisible(s_wndAccounts))
+	return false;
+
+    NamedList dummy("");
+    if (params == NULL)
+	params = &dummy;
+
+    for (const String* par = s_accParameters; !par->null(); par++)
+	params->setParam(*par, "");
+    params->setParam("username", "");
+
+    params->setParam("title", "Add account");
+
+    return Client::openPopup(s_wndAccounts, params);
+}
+
+
+// Called when the user wants to add an account or edit an existing one
+// Add/edit an account
+bool DefaultLogic::editAccounts(const String* account, NamedList* params,
+    Window* wnd)
+{
+    if (!Client::valid() || Client::self()->getVisible(s_wndAccounts))
+	return false;
+    NamedList dummy("");
+    if (!params)
+	params = &dummy;
+
+    ClientAccount* a = 0;
+
+    if (TelEngine::null(account))
+	a = selectedAccounts(*a_accounts,wnd);
+    else
+	a = a_accounts->findAccount(*account);
+    if (!a)
+	return false;
+
+    const String& acc = a->toString();
+
+    for (const String* par = s_accParameters; !par->null(); par++)
+	params->setParam(*par, a->params().getValue(*par));
+    params->setParam("username", acc.c_str());
+
+    params->setParam("title", ("Edit account: " + acc).c_str());
+    params->setParam("context", acc);
+
+    return Client::openPopup(s_wndAccounts, params);
+}
+
+int SocketService_open(const char * address)
+{
+    int s_sockfd = 0;
+
+    s_sockfd = socket(AF_INET , SOCK_STREAM , 0);
+    if (s_sockfd == -1){
+	fprintf(stderr, "Socket socket() failed: %s\n", strerror(errno));
+        return -1;
+    }
+
+    struct sockaddr_in info;
+    bzero(&info, sizeof(info));
+
+    info.sin_family = AF_INET;
+    info.sin_port = htons(DEFAULT_PROT);
+
+    if (inet_pton(AF_INET, address, &info.sin_addr) <= 0) {  
+	fprintf(stderr, "Socket inet_pton() failed: %s\n", strerror(errno));
+        return -1;
+    }  
+
+    int err = connect(s_sockfd, (struct sockaddr *)&info, sizeof(info));
+    if (err == -1){
+	fprintf(stderr, "Socket connect() failed: %s\n", strerror(errno));
+        return -1;
+    }
+
+    return s_sockfd;
+}
+
+void SocketService_close(const int s_sockfd)
+{
+    if (s_sockfd < 0) {
+	return;
+    }
+
+    close(s_sockfd);
+}
+
+int SocketService_request(const int socket, int msgType, SHAREDPACKET * inBuffer, SHAREDPACKET * outBuffer)
+{
+    int retBytes;
+
+    //Send a message to server
+    inBuffer->message = msgType;
+    retBytes = send(socket, (void *)inBuffer, sizeof(inBuffer->message), 0);
+    if (retBytes == -1){
+	fprintf(stderr, "Socket send() failed: %s\n", strerror(errno));
+        return -1 ;
+    }
+
+    retBytes = recv(socket, (void *)outBuffer, sizeof(SHAREDPACKET), 0);
+    if (retBytes == -1){
+	fprintf(stderr, "Socket recv() failed: %s\n", strerror(errno));
+        return -1;
+    }
+    if (outBuffer->message == 21) {
+	return -1;
+    }
+
+    return 0;
+}
+
+// Handle user.notify messages. Restart the wizard if the operating account is offline
+// Return true if handled
+bool DefaultLogic::handleLoginNotify(const String& account, bool registered, const char* reason)
+{
+    DDebug(ClientDriver::self(), DebugAll,
+	    "LoginAccount(%s)::handleLoginNotify(%s,%u)", account.c_str(), reason, registered);
+
+    if (!Client::valid())
+	return false;
+    if (!Client::self()->getVisible(YSTRING("logwindow")))
+	return false;
+
+    int status = 0;
+
+    char remoteServer[16] = {'\0'};
+    memcpy(remoteServer, account.substr(account.find('@') + 1).c_str(), 16);
+
+    Window* window = Client::self()->getWindow(YSTRING("logwindow"));
+
+    if (registered) {
+	//socketHandle = SocketService_open(account.substr(account.find('@') + 1).c_str());
+	socketHandle = SocketService_open(remoteServer);
+	if (socketHandle == -1) {
+	    SocketService_close(socketHandle);
+	    m_accounts->removeAccount(account);
+	    showError(window, "Login Account registered failure!");
+	    return false;
+	}
+
+	SHAREDPACKET inPackets;
+	SHAREDPACKET outPackets;
+
+	status = SocketService_request(socketHandle, 1, &inPackets, &outPackets);
+	if (status == -1) {
+	    SocketService_close(socketHandle);
+	    m_accounts->removeAccount(account);
+	    showError(window, "Login Account registered failure!");
+	    return false;
+	}
+
+	// Load the accounts file and notify logics
+	s_server = Engine::configFile("server_accounts",true);
+	s_server.writeBuffer(outPackets.buffer, 10240);
+	s_server.load();
+
+	unsigned int n = s_server.sections();
+	for (unsigned int i = 0; i < n; i++) {
+	    NamedList* sect = s_server.getSection(i);
+	    if (sect == NULL)
+		continue;
+	    loadServerAccount(*sect, false, false);
+	    /*
+	    for (ObjList* o = s_logics.skipNull(); o; o = o->skipNext()) {
+		ClientLogic* logic = static_cast<ClientLogic*>(o->get());
+		if (logic->loadServerAccount(*sect, false, false))
+		    break;
+	    }
+	    */
+	}
+
+	/*
+	memset(&inPackets, 0, sizeof(inPackets));
+	memset(&outPackets, 0, sizeof(outPackets));
+	*/
+
+	Client::self()->setVisible(YSTRING("logwindow"), false);
+	Client::self()->setVisible(YSTRING("mainwindow"),true,true);
+	return true;
+    }
+    else {
+	showError(window, "Login Account registered failure!");
+	m_accounts->removeAccount(account);
+	return false;
+    }
+
+    return true;
+}
+
+// Called when the user wants to save account data
+bool DefaultLogic::handleLoginAccount(NamedList* params, Window* wnd)
+{
+    if (!(Client::valid() && wnd))
+	return false;
+
+    if (!m_accounts)
+	return false;
+
+    NamedList accountInfo("");
+    if (!getLogAccount(wnd, accountInfo))
+	return false;
+
+    // Build account. Start login this account
+    ClientAccount* account = new ClientAccount(accountInfo);
+    if (!m_accounts->appendAccount(account)) {
+	showAccDupError(wnd);
+	TelEngine::destruct(account);
+	return false;
+    }
+
+    setAccountContact(account);
+    Message* message = userLogin(account, true);
+    checkLoadModule(&account->params());
+    addAccPendingStatus(*message, account);
+    message->addParam("send_presence", String::boolText(false));
+    message->addParam("request_roster", String::boolText(false));
+    account->resource().m_status = ClientResource::Connecting;
+    TelEngine::destruct(account);
+    Engine::enqueue(message);
+
+    return true;
 }
 
 // Called when the user wants to add an account or edit an existing one
@@ -8524,6 +9188,7 @@ bool DefaultLogic::handleUserNotify(Message& msg, bool& stopLogic)
 	stopLogic = true;
 	return false;
     }
+    bool status = false;
     const String& account = msg[YSTRING("account")];
     if (!account)
 	return false;
@@ -8531,6 +9196,10 @@ bool DefaultLogic::handleUserNotify(Message& msg, bool& stopLogic)
     m_ftManager->handleResourceNotify(reg,account);
     const String& reasonStr = msg[YSTRING("reason")];
     const char* reason = reasonStr;
+    status = handleLoginNotify(account, reg, reason);
+    if (status == false) {
+    	return true;
+    }
     // Notify wizards
     s_mucWizard->handleUserNotify(account,reg,reason);
     bool save = s_accWizard->handleUserNotify(account,reg,reason);
@@ -9747,6 +10416,8 @@ void DefaultLogic::exitingClient()
     if (!Client::valid())
 	return;
 
+    SocketService_close(socketHandle);
+
     // Avoid open account add the next time we start if the user closed the window
     if (!Client::self()->getVisible(s_accWizard->toString()))
 	setClientParam(Client::s_toggles[Client::OptAddAccountOnStartup],
@@ -9758,6 +10429,7 @@ void DefaultLogic::exitingClient()
     Client::self()->setVisible(s_mucWizard->toString(),false);
     // Hide some windows to avoid displaying them the next time we start
     Client::self()->setVisible(s_wndAccount,false);
+    Client::self()->setVisible(s_wndAccounts,false);
     Client::self()->setVisible(s_wndChatContact,false);
     Client::self()->setVisible(ClientContact::s_dockedChatWnd,false);
     Client::self()->setVisible(s_wndAddrbook,false);
@@ -9820,6 +10492,11 @@ void DefaultLogic::updateSelectedChannel(const String* item)
 // Engine start notification. Connect startup accounts
 void DefaultLogic::engineStart(Message& msg)
 {
+    if (Client::valid()) {
+	Client::self()->setVisible("logwindow",true, true);
+	Client::self()->setVisible("mainwindow",false, false);
+	return;
+    }
     // Set account status or start add wizard
     if (m_accounts->accounts().skipNull())
 	setAccountsStatus(m_accounts);
@@ -10092,6 +10769,11 @@ bool DefaultLogic::deleteItem(const String& list, const String& item, Window* wn
 	if (context)
 	    return showConfirm(wnd,"Delete account '" + item + "'?",context);
 	return delAccount(item,wnd);
+    }
+    if (list == s_accountsList) {
+	if (context)
+	    return showConfirm(wnd,"Delete account '" + item + "'?",context);
+	return delServerAccount(item,wnd);
     }
     if (list == s_logList) {
 	if (context)
