@@ -79,6 +79,14 @@ description=accounts.ui
 enabled=true
 description=accountslist.ui
 
+[conference]
+enabled=true
+description=conference.ui
+
+[conferencelist]
+enabled=true
+description=conferencelist.ui
+
 [accountwizard]
 enabled=true
 description=accountwizard.ui

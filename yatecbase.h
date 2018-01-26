@@ -2834,6 +2834,8 @@ public:
 	{ return false; }
     virtual bool delServerAccount(const String& account, Window* wnd = 0)
 	{ return false; }
+    virtual bool delConference(const String& account, Window* wnd = 0)
+	{ return false; }
 
     /**
      * Add/set an account. Login if required
@@ -2844,7 +2846,9 @@ public:
      */
     virtual bool updateAccount(const NamedList& account, bool login, bool save)
 	{ return false; }
-    virtual bool loadServerAccount(const NamedList& account, bool login, bool save)
+    virtual bool loadServerAccount(bool login, bool save)
+	{ return false; }
+    virtual bool loadConferenceList(bool login, bool save)
 	{ return false; }
 
     /**
@@ -3368,6 +3372,7 @@ public:
      */
     virtual bool delAccount(const String& account, Window* wnd = 0);
     virtual bool delServerAccount(const String& account, Window* wnd = 0);
+    virtual bool delConference(const String& account, Window* wnd = 0);
 
     /**
      * Add/set an account
@@ -3377,7 +3382,8 @@ public:
      * @return True on success
      */
     virtual bool updateAccount(const NamedList& account, bool login, bool save);
-    virtual bool loadServerAccount(const NamedList& account, bool login, bool save);
+    virtual bool loadServerAccount(bool login, bool save);
+    virtual bool loadConferenceList(bool login, bool save);
 
     /**
      * Login/logout an account
@@ -3821,6 +3827,10 @@ private:
     // Add/edit an account
     bool internalEditAccount(bool newAcc, const String* account, NamedList* params, Window* wnd);
 
+    bool createConference(NamedList* params, Window* wnd);
+    bool addConference(const NamedList& conference);
+    bool saveConference(NamedList* params, Window* wnd);
+
     bool editAccounts(const String* account, NamedList* params, Window* wnd);
     bool newAccounts(const String* account, NamedList* params, Window* wnd);
     bool saveServerAccount(NamedList* params, Window* wnd);
@@ -3888,8 +3898,11 @@ private:
     void handleFileSharedChanged(ClientAccount* a, const String& contact,
 	const String& inst);
 
+    PGconn * conn = NULL;
+
     ClientAccountList* m_accounts;       // Accounts list (always valid)
-    ClientAccountList* a_accounts;       // Asterisk accounts list (always valid)
+    ClientAccountList* a_accounts;       // FreeSwitch accounts list (always valid)
+    ClientAccountList* a_conferences;   // Conference accounts list (always valid)
     FtManager* m_ftManager;              // Private file manager
 };
 

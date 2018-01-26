@@ -224,8 +224,6 @@ public:
      * @return True if successfull, false for failure
      */
     bool save() const;
-    bool writeBuffer(char * buffer, int length);
-    bool readBuffer(char * buffer);
 
 private:
     ObjList *getSectHolder(const String& sect) const;

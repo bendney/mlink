@@ -39,7 +39,7 @@ if [ -x "$ac" ]; then
 	    echo "Finished! Now run make."
 	    ;;
 	*)
-	    echo "Finished! Now run configure. If in doubt run ./configure --help"
+	    echo "You can now run ./configure"
 	    ;;
     esac
 else

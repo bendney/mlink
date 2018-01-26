@@ -21,17 +21,7 @@
 
 #include "yatecbase.h"
 
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/socket.h>
-
-#define DEFAULT_PROT  8700
-
-typedef struct sharedPacket {
-    int message;
-    char buffer[10240];
-} SHAREDPACKET;
+#include "esl.h"
 
 namespace TelEngine {
 
@@ -705,7 +695,8 @@ using namespace TelEngine;
 // Windows
 static const String s_wndMain = "mainwindow";           // mainwindow
 static const String s_wndAccount = "account";           // Account edit/add
-static const String s_wndAccounts = "accounts";         // Account edit/add
+static const String s_wndAccounts = "accounts";         // Server account edit/add
+static const String s_wndConference = "conference";     // Conference edit/add
 static const String s_wndAddrbook = "addrbook";         // Contact edit/add
 static const String s_wndChatContact = "chatcontact";   // Chat contact edit/add
 static const String s_wndMucInvite = "mucinvite";       // MUC invite
@@ -716,7 +707,8 @@ static const String s_wndNotification = "notification"; // Notifications
 static const String s_mainwindowTabs = "mainwindowTabs";
 static const String s_channelList = "channels";
 static const String s_accountList = "accounts";         // Global accounts list
-static const String s_accountsList = "accountss";       // Global accounts list
+static const String s_accountsList = "accountss";       // Global server account list
+static const String s_conferenceList = "conferences";       // Global server account list
 static const String s_contactList = "contacts";
 static const String s_logList = "log";
 static const String s_calltoList = "callto";
@@ -790,8 +782,6 @@ static const String s_fileShareRename = "file_share_rename";
 static String s_notSelected = "-none-";
 // Maximum number of call log entries
 static unsigned int s_maxCallHistory = 20;
-// Global socket fd to connect server
-static int socketHandle = 0;
 // Global account status
 ObjList AccountStatus::s_items;
 AccountStatus* AccountStatus::s_current = 0;
@@ -829,9 +819,19 @@ const char* ClientLogic::s_provParams[] = {
     "port",
     0
 };
-// Common account parameters (protocol independent)
+// Common server conference parameters
+static const String s_confParameters[] = {
+    "confnum", "confname", "confuserpin", "confadminpin", "mode", ""
+};
+// Common server account parameters (protocol independent)
 static const String s_accParameters[] = {
-    "dtmfmode", "qualify", "secret", "grade", ""
+    "dtmfmode", "qualify", "username", "secret", "grade", ""
+};
+
+static esl_handle_t * handle;
+
+static const String s_accParamss[] = {
+    "username", "secret", ""
 };
 // Common account parameters (protocol independent)
 static const String s_accParams[] = {
@@ -861,7 +861,6 @@ static const TokenDict s_statusImage[] = {
 };
 // Saved rooms
 static Configuration s_mucRooms;
-static Configuration s_server;                  // Server Accounts
 // Actions from notification area
 enum PrivateNotifAction {
     PrivNotificationOk = 1,
@@ -6790,6 +6789,7 @@ DefaultLogic::DefaultLogic(const char* name, int prio)
 {
     m_accounts = new ClientAccountList(name,new ClientAccount(NamedList::empty()));
     a_accounts = new ClientAccountList("a_accounts",new ClientAccount(NamedList::empty()));
+    a_conferences = new ClientAccountList("a_conferences",new ClientAccount(NamedList::empty()));
     s_accWizard = new AccountWizard(m_accounts);
     s_mucWizard = new JoinMucWizard(m_accounts);
     m_ftManager = new FtManager(m_accounts,"FileTransferManager");
@@ -6810,6 +6810,7 @@ DefaultLogic::~DefaultLogic()
     TelEngine::destruct(s_mucWizard);
     TelEngine::destruct(m_ftManager);
     TelEngine::destruct(a_accounts);
+    TelEngine::destruct(a_conferences);
     TelEngine::destruct(m_accounts);
 }
 
@@ -6819,6 +6820,9 @@ bool DefaultLogic::action(Window* wnd, const String& name, NamedList* params)
 {
     DDebug(ClientDriver::self(),DebugAll,"Logic(%s) action '%s' in window (%p,%s)",
 	toString().c_str(),name.c_str(),wnd,wnd ? wnd->id().c_str() : "");
+
+    Debug(ClientDriver::self(), DebugNote, "Logic(%s) action '%s' in window (%p,%s)",
+	toString().c_str(), name.c_str(), wnd, wnd ? wnd->id().c_str() : "");
 
     // Translate actions from confirmation boxes
     // the window context specifies what action will be taken forward
@@ -6972,6 +6976,17 @@ bool DefaultLogic::action(Window* wnd, const String& name, NamedList* params)
 	return true;
     }
 
+    /* Conference management */
+    if (name == YSTRING("conf_new")) {
+	return createConference(params, wnd);
+    }
+    if (name == YSTRING("conf_edit")) {
+	//return editConference(0, params, wnd);
+    }
+    if (name == YSTRING("conf_save")) {
+	return saveConference(params, wnd);
+    }
+
     // *** Account management
 
     if (name == YSTRING("account_new")) {
@@ -7094,8 +7109,16 @@ bool DefaultLogic::action(Window* wnd, const String& name, NamedList* params)
 	    return handleMucInviteOk(wnd);
     }
     // Handle show window actions
-    if (name.startsWith("action_show_"))
+    if (name.startsWith("action_show_")) {
+	Debug(ClientDriver::self(), DebugNote, "-------------------------------------------");
+	if (name.substr(12) == YSTRING("accountsList")) {
+	    loadServerAccount(false, false);
+	}
+	else if (name.substr(12) == YSTRING("conferencelist")) {
+	    loadConferenceList(false, false);
+	}
 	Client::self()->setVisible(name.substr(12),true,true);
+    }
 #if 0
     if (name.startsWith("action_toggleshow_")) {
 	String wnd = name.substr(18);
@@ -7911,6 +7934,30 @@ bool DefaultLogic::digitPressed(NamedList& params, Window* wnd)
     return false;
 }
 
+bool api_execute(esl_handle_t * handle, const char * argv_command)
+{
+    if (!handle && !argv_command) {
+	return false;
+    }
+
+    esl_status_t status;
+    char cmd_str[1024] = "";
+
+    esl_snprintf(cmd_str, sizeof(cmd_str), "api %s\nconsole_execute: true\n\n", argv_command);
+    status = esl_send_recv_timed(handle, cmd_str, 0);
+    if (status != ESL_SUCCESS) {
+	return false;
+    }
+
+    if (handle->last_sr_event && handle->last_sr_event->body) {
+	//return handle->last_sr_event->body;
+	return true;
+    }
+
+    return false;
+}
+
+
 // Retrieve login account data from UI
 static bool getLogAccount(Window* w, NamedList& p)
 {
@@ -7995,6 +8042,79 @@ static bool getLogAccount(Window* w, NamedList& p)
     return true;
 }
 
+// Load conference list
+bool DefaultLogic::loadConferenceList(bool login, bool save)
+{
+    DDebug(ClientDriver::self(),DebugAll,"Logic(%s) loadConferenceList(%s,%s)",
+	toString().c_str(),String::boolText(login),String::boolText(save));
+
+    if (!Client::valid())
+	return false;
+
+    PGresult   *res;
+    int nFields;
+    int i, j;
+    ClientAccount* conference = 0;
+    bool appendStatus = true;
+    NamedList confinfo("");
+
+    res = PQexec(conn, "SELECT * FROM conference");
+    if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+	Debug(ClientDriver::self(), DebugWarn,
+		"Fetch all data from database failed %s", PQerrorMessage(conn));
+	PQclear(res);
+	PQfinish(conn);
+    }
+
+    /* first, print out the attribute names */
+    nFields = PQnfields(res);
+    for (i = 0; i < nFields; i++)
+	printf("%-15s", PQfname(res, i));
+    printf("\n\n");
+
+    /* next, print out the rows */
+    for (i = 0; i < PQntuples(res); i++) {
+	for (j = 0; j < nFields; j++) {
+	    confinfo.setParam(s_confParameters[j], PQgetvalue(res, i, j));
+	    confinfo.assign(confinfo.getValue(YSTRING("confnum")));
+	    printf("%-15s", PQgetvalue(res, i, j));
+	}
+	printf("\n");
+
+	conference = a_accounts->findAccount(confinfo, true);
+	if (conference) {
+	    Debug(ClientDriver::self(), DebugWarn, "Skip load an existing conference!");
+	    continue;
+	}
+
+	// append conference to a_conferences
+	conference = new ClientAccount(confinfo);
+
+	appendStatus = a_conferences->appendAccount(conference);
+	if (appendStatus == false) {
+	    Debug(ClientDriver::self(),DebugNote,
+		    "Failed to append duplicate confinfo '%s'", conference->toString().c_str());
+	    continue;
+	}
+
+	// Update conference list
+	NamedList p("");
+	p.addParam("check:enabled", String::boolText(false));
+	p.addParam("conference", conference->toString());
+	p.addParam("status", conference->params().getValue("mode"));
+
+	Client::self()->updateTableRow(s_conferenceList, conference->toString(), &p);
+	// Make sure the account is selected in accounts list
+	Client::self()->setSelect(s_conferenceList, conference->toString());
+    }
+    PQclear(res);
+
+    TelEngine::destruct(conference);
+
+    return true;
+
+}
+
 
 // Retrieve account data from UI
 static bool getUiAccount(Window* w, NamedList& p, ClientAccountList& accounts)
@@ -8003,65 +8123,88 @@ static bool getUiAccount(Window* w, NamedList& p, ClientAccountList& accounts)
 	return false;
 
     String user;
+    String secret;
 
     Client::self()->getText("username", user, false, w);
     if (user.null()) {
 	showError(w,"Account username is mandatory");
 	return false;
     }
-
     p.assign(user);
 
     for (const String* par = s_accParameters; !par->null(); par++)
 	saveParam(p, "", *par, w);
 
-    p.setParam("directmedia", "no");
-    p.setParam("context", "from-internal");
-    p.setParam("host", "dynamic");
-    p.setParam("type", "friend");
-
     return true;
 }
 
 // load an account
-bool DefaultLogic::loadServerAccount(const NamedList& account, bool login, bool save)
+bool DefaultLogic::loadServerAccount(bool login, bool save)
 {
-    DDebug(ClientDriver::self(),DebugAll,"Logic(%s) loadServerAccount(%s,%s,%s)",
-	toString().c_str(),account.c_str(),String::boolText(login),String::boolText(save));
+    DDebug(ClientDriver::self(),DebugAll,"Logic(%s) loadServerAccount(%s,%s)",
+	toString().c_str(),String::boolText(login),String::boolText(save));
 
-    if (!Client::valid() || account.null())
+    if (!Client::valid())
 	return false;
 
+    PGresult   *res;
+    int nFields;
+    int i, j;
     ClientAccount* loadAccount = 0;
     bool appendStatus = true;
+    NamedList account("");
 
-    loadAccount = a_accounts->findAccount(account, true);
-    if (loadAccount) {
-	Debug(ClientDriver::self(), DebugWarn, "Load an existing account !");
-	return false;
+    res = PQexec(conn, "SELECT * FROM userinfo");
+    if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+	Debug(ClientDriver::self(), DebugWarn,
+		"Fetch all data from database failed %s", PQerrorMessage(conn));
+	PQclear(res);
+	PQfinish(conn);
     }
 
-    // Update account to a_accounts
-    loadAccount = new ClientAccount(account);
+    /* first, print out the attribute names */
+    nFields = PQnfields(res);
+    for (i = 0; i < nFields; i++)
+	printf("%-15s", PQfname(res, i));
+    printf("\n\n");
 
-    appendStatus = a_accounts->appendAccount(loadAccount);
-    if (appendStatus == false) {
-	Debug(ClientDriver::self(),DebugNote,
-	    "Failed to append duplicate account '%s'", loadAccount->toString().c_str());
-	TelEngine::destruct(loadAccount);
-	return false;
+    /* next, print out the rows */
+    for (i = 0; i < PQntuples(res); i++) {
+	for (j = 0; j < nFields; j++) {
+	    account.setParam(s_accParameters[j], PQgetvalue(res, i, j));
+	    account.assign(account.getValue(YSTRING("username")));
+	    printf("%-15s", PQgetvalue(res, i, j));
+	}
+	printf("\n");
+
+	loadAccount = a_accounts->findAccount(account, true);
+	if (loadAccount) {
+	    Debug(ClientDriver::self(), DebugWarn, "Skip load an existing account !");
+	    continue;
+	}
+
+	// append account to a_accounts
+	loadAccount = new ClientAccount(account);
+
+	appendStatus = a_accounts->appendAccount(loadAccount);
+	if (appendStatus == false) {
+	    Debug(ClientDriver::self(),DebugNote,
+		    "Failed to append duplicate account '%s'", loadAccount->toString().c_str());
+	    continue;
+	}
+
+	// Update account list
+	NamedList p("");
+	p.addParam("check:select", String::boolText(false));
+	p.addParam("account", loadAccount->toString());
+	p.addParam("grade", loadAccount->params().getValue("grade"));
+
+	Client::self()->updateTableRow(s_accountsList, loadAccount->toString(), &p);
+	// Make sure the account is selected in accounts list
+	Client::self()->setSelect(s_accountsList, loadAccount->toString());
+	//Client::self()->setSelect(s_account, s_notSelected);
     }
-
-    // Update account list
-    NamedList p("");
-    p.addParam("check:select", String::boolText(false));
-    p.addParam("account", loadAccount->toString());
-    p.addParam("grade", loadAccount->params().getValue("grade"));
-
-    Client::self()->updateTableRow(s_accountsList, loadAccount->toString(), &p);
-    // Make sure the account is selected in accounts list
-    Client::self()->setSelect(s_accountsList, loadAccount->toString());
-    //Client::self()->setSelect(s_account, s_notSelected);
+    PQclear(res);
 
     TelEngine::destruct(loadAccount);
 
@@ -8074,6 +8217,8 @@ bool DefaultLogic::addServerAccount(const NamedList& account)
 {
     bool appendStatus = true;
     ClientAccount* newAccount = 0;
+    char cmd_str[128] = "";
+    PGresult   *res;
 
     newAccount = a_accounts->findAccount(account, true);
     if (newAccount) {
@@ -8093,6 +8238,33 @@ bool DefaultLogic::addServerAccount(const NamedList& account)
 	return false;
     }
 
+    String user = newAccount->params().getValue("username");
+    String secret = newAccount->params().getValue("secret");
+    String dtmfmode = newAccount->params().getValue("dtmfmode");
+    String qualify = newAccount->params().getValue("qualify");
+    String grade = newAccount->params().getValue("grade");
+
+    Debug(ClientDriver::self(), DebugNote, 
+	    "INSERT INTO userinfo VALUES(%s, %s, %s, %s, %s)",
+	    (const char *)dtmfmode, (const char *)qualify,
+	    (const char *)user, (const char *)secret,
+	    (const char *)grade);
+
+    snprintf(cmd_str, sizeof(cmd_str),
+	    "INSERT INTO userinfo VALUES('%s', '%s', '%s', '%s', '%s')",
+	    (const char *)dtmfmode, (const char *)qualify,
+	    (const char *)user, (const char *)secret,
+	    (const char *)grade);
+    res = PQexec(conn, cmd_str);
+    if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+	Debug(ClientDriver::self(), DebugWarn,
+		"Insert data into table failed %s", PQerrorMessage(conn));
+	PQclear(res);
+	PQfinish(conn);
+	return false;
+    }
+    PQclear(res);
+
     // Update account list
     NamedList p("");
     p.addParam("check:select", String::boolText(false));
@@ -8102,26 +8274,6 @@ bool DefaultLogic::addServerAccount(const NamedList& account)
     Client::self()->updateTableRow(s_accountsList, newAccount->toString(), &p);
     // Make sure the account is selected in accounts list
     Client::self()->setSelect(s_accountsList, newAccount->toString());
-
-    NamedList* sect = s_server.createSection(newAccount->toString());
-    if (sect != NULL) {
-	*sect = newAccount->m_params;
-    }
-    // Save the account to file
-    //Client::save(Client::s_server);
-
-    SHAREDPACKET inPackets;
-    SHAREDPACKET outPackets;
-
-    memset(&inPackets, 0, sizeof(SHAREDPACKET));
-    memset(&outPackets, 0, sizeof(SHAREDPACKET));
-
-    outPackets.message = 2;
-    s_server.readBuffer(outPackets.buffer);
-
-    send(socketHandle, &outPackets, sizeof(int) + strlen(outPackets.buffer), 0);
-
-    //recv(s_sockfd, &inPackets, sizeof(SHAREDPACKET), 0);
 
     TelEngine::destruct(newAccount);
 
@@ -8138,6 +8290,8 @@ bool DefaultLogic::editServerAccount(const NamedList& account, bool save,
 
     bool appendStatus = true;
     bool changed = true;
+    char cmd_str[128] = "";
+    PGresult   *res;
     ClientAccount* origAccount = 0;
     ClientAccount* newAccount = 0;
 
@@ -8165,6 +8319,26 @@ bool DefaultLogic::editServerAccount(const NamedList& account, bool save,
 	}
     }
 
+    String user = newAccount->params().getValue("username");
+    String secret = newAccount->params().getValue("secret");
+    String dtmfmode = newAccount->params().getValue("dtmfmode");
+    String qualify = newAccount->params().getValue("qualify");
+    String grade = newAccount->params().getValue("grade");
+
+    snprintf(cmd_str, sizeof(cmd_str), 
+	    "UPDATE userinfo SET dtmfmode='%s', qualify='%s', grade='%s', secret='%s'  WHERE username='%s'",
+	    (const char *)dtmfmode, (const char *)qualify,
+	    (const char *)grade, (const char *)secret,
+	    (const char *)user);
+    res = PQexec(conn, cmd_str);
+    if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+	Debug(ClientDriver::self(), DebugWarn,
+		"Update data into table failed %s", PQerrorMessage(conn));
+	PQclear(res);
+	PQfinish(conn);
+    }
+    PQclear(res);
+
     // Update account list
     NamedList p("");
     p.addParam("check:select", String::boolText(false));
@@ -8174,33 +8348,6 @@ bool DefaultLogic::editServerAccount(const NamedList& account, bool save,
     Client::self()->updateTableRow(s_accountsList, newAccount->toString(), &p);
     // Make sure the account is selected in accounts list
     Client::self()->setSelect(s_accountsList, newAccount->toString());
-
-
-    s_server.clearSection(origAccount->toString());
-
-    NamedList* sect = s_server.getSection(newAccount->toString());
-    if (sect == NULL) {
-	sect = s_server.createSection(newAccount->toString());
-	if (sect != NULL) {
-	    *sect = newAccount->m_params;
-	}
-    }
-    
-    // Save the account to file
-    //Client::save(Client::s_server);
-    
-    SHAREDPACKET inPackets;
-    SHAREDPACKET outPackets;
-
-    memset(&inPackets, 0, sizeof(SHAREDPACKET));
-    memset(&outPackets, 0, sizeof(SHAREDPACKET));
-
-    outPackets.message = 2;
-    s_server.readBuffer(outPackets.buffer);
-
-    send(socketHandle, &outPackets, sizeof(int) + strlen(outPackets.buffer), 0);
-
-    //recv(s_sockfd, &inPackets, sizeof(SHAREDPACKET), 0);
 
     TelEngine::destruct(newAccount);
     TelEngine::destruct(origAccount);
@@ -8214,31 +8361,29 @@ bool DefaultLogic::delServerAccount(const String& account, Window* wnd)
     if (!account)
 	return deleteSelectedItem(s_accountsList + ":",wnd);
 
+    char cmd_str[128] = "";
+    PGresult   *res;
+
     ClientAccount* acc = a_accounts->findAccount(account);
     if (!acc)
 	return false;
 
-    //Client::self()->delTableRow(s_account,account);
+    String user = acc->params().getValue("username");
+
+    snprintf(cmd_str, sizeof(cmd_str), "DELETE FROM userinfo WHERE username='%s'", (const char *)user);
+    res = PQexec(conn, cmd_str);
+    if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+	Debug(ClientDriver::self(), DebugWarn,
+		"Delete data from table failed %s", PQerrorMessage(conn));
+	PQclear(res);
+	PQfinish(conn);
+	return false;
+    }
+    PQclear(res);
+
     Client::self()->delTableRow(s_accountsList, account);
 
     a_accounts->removeAccount(account);
-
-    s_server.clearSection(account.toString());
-
-    //Client::save(Client::s_server);
-  
-    SHAREDPACKET inPackets;
-    SHAREDPACKET outPackets;
-
-    memset(&inPackets, 0, sizeof(SHAREDPACKET));
-    memset(&outPackets, 0, sizeof(SHAREDPACKET));
-
-    outPackets.message = 2;
-    s_server.readBuffer(outPackets.buffer);
-
-    send(socketHandle, &outPackets, sizeof(int) + strlen(outPackets.buffer), 0);
-
-    //recv(s_sockfd, &inPackets, sizeof(SHAREDPACKET), 0);
 
     return true;
 }
@@ -8273,6 +8418,198 @@ bool DefaultLogic::saveServerAccount(NamedList* params, Window* wnd)
 	    return false;
     }
 
+    api_execute(handle, "lua gen_directory.lua");
+    api_execute(handle, "reloadxml");
+
+    // Hide the window. Save some settings
+    Client::self()->setVisible(wnd->toString(),false);
+
+    return true;
+}
+
+// Retrieve account data from UI for conference
+static bool getUiConference(Window* w, NamedList& p, ClientAccountList& accounts)
+{
+    if (!Client::valid())
+	return false;
+
+    String confNumber;
+
+    Client::self()->getText("confnum", confNumber, false, w);
+    if (confNumber.null()) {
+	showError(w,"Conference number is mandatory");
+	return false;
+    }
+
+    p.assign(confNumber);
+
+    for (const String* par = s_confParameters; !par->null(); par++)
+	saveParam(p, "", *par, w);
+
+    return true;
+}
+
+/*
+ * Add an conference
+ */
+bool DefaultLogic::createConference(NamedList* params, Window* wnd)
+{
+    if (!Client::valid() || Client::self()->getVisible(s_wndConference))
+	return false;
+
+    NamedList dummyConference("");
+    if (params == NULL) {
+	params = &dummyConference;
+    }
+
+    for (const String* par = s_confParameters; !par->null(); par++) {
+	params->setParam(*par, "");
+    }
+
+    params->setParam("title", "Add conference");
+
+    return Client::openPopup(s_wndConference, params);
+}
+
+// Add an conference
+bool DefaultLogic::addConference(const NamedList& conference)
+{
+    bool appendStatus = true;
+    ClientAccount* newConference = 0;
+    char cmd_str[128] = "";
+    PGresult   *res;
+
+    newConference = a_conferences->findAccount(conference, true);
+    if (newConference) {
+	TelEngine::destruct(newConference);
+	Debug(ClientDriver::self(), DebugWarn, "Conference exsiting in server!");
+	return false;
+    }
+
+    // add account
+    newConference = new ClientAccount(conference);
+    appendStatus = a_conferences->appendAccount(newConference);
+    if (appendStatus == false) {
+	Debug(ClientDriver::self(),DebugNote,
+		"Failed to append duplicate conference '%s'",
+		newConference->toString().c_str());
+	TelEngine::destruct(newConference);
+	return false;
+    }
+
+    String confnum = newConference->params().getValue("confnum");
+    String confname = newConference->params().getValue("confname");
+    String confuserpin = newConference->params().getValue("confuserpin");
+    String confadminpin = newConference->params().getValue("confadminpin");
+    String mode = newConference->params().getValue("mode");
+
+    Debug(ClientDriver::self(), DebugNote, 
+	    "INSERT INTO conference VALUES(%s, %s, %s, %s, %s)",
+	    (const char *)confnum, (const char *)confname,
+	    (const char *)confuserpin, (const char *)confadminpin,
+	    (const char *)mode);
+    snprintf(cmd_str, sizeof(cmd_str),
+	    "INSERT INTO conference VALUES('%s', '%s', '%s', '%s', '%s')",
+	    (const char *)confnum, (const char *)confname,
+	    (const char *)confuserpin, (const char *)confadminpin,
+	    (const char *)mode);
+    res = PQexec(conn, cmd_str);
+    if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+	Debug(ClientDriver::self(), DebugWarn,
+		"Insert data into table failed %s", PQerrorMessage(conn));
+	PQclear(res);
+	PQfinish(conn);
+	return false;
+    }
+    PQclear(res);
+
+    // Update conference row
+    NamedList row("");
+    row.addParam("check:enable", String::boolText(false));
+    row.addParam("conference", newConference->toString());
+    row.addParam("status", newConference->params().getValue("mode"));
+
+    Client::self()->updateTableRow(s_conferenceList, newConference->toString(), &row);
+    // Make sure the account is selected in accounts list
+    Client::self()->setSelect(s_conferenceList, newConference->toString());
+
+    TelEngine::destruct(newConference);
+
+    return true;
+}
+
+// Called when the admin wants to delete an existing conference
+bool DefaultLogic::delConference(const String& conference, Window* wnd)
+{
+    if (!conference)
+	return deleteSelectedItem(s_conferenceList + ":", wnd);
+
+    char cmd_str[128] = "";
+    PGresult   *res;
+
+    ClientAccount* conf = a_conferences->findAccount(conference);
+    if (!conf)
+	return false;
+
+    String confnum = conf->params().getValue("confnum");
+
+    snprintf(cmd_str, sizeof(cmd_str), "DELETE FROM conference WHERE confnum='%s'", (const char *)confnum);
+    res = PQexec(conn, cmd_str);
+    if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+	Debug(ClientDriver::self(), DebugWarn,
+		"Delete data from table failed %s", PQerrorMessage(conn));
+	PQclear(res);
+	PQfinish(conn);
+	return false;
+    }
+    PQclear(res);
+
+    Client::self()->delTableRow(s_conferenceList, conference);
+
+    a_conferences->removeAccount(conference);
+
+    return true;
+}
+
+/*
+ * Save an conference
+ */
+bool DefaultLogic::saveConference(NamedList* params, Window* wnd)
+{
+    if (!(Client::valid() && wnd))
+	return false;
+
+    NamedList p("");
+    if (!getUiConference(wnd, p, *a_conferences))
+	return false;
+
+    /*
+    const String& replace = wnd ? wnd->context() : String::empty();
+    if (replace) {
+	ClientAccount* edit = a_conferences->findAccount(replace);
+	if (edit) {
+	    ClientAccount* acc = a_conferences->findAccount(p);
+	    if (acc && acc != edit) {
+		showAccDupError(wnd);
+		return false;
+	    }
+	}
+
+	if (!editServerAccount(p, false, replace, false)) {
+	    return false;
+	}
+    } else {
+	if (!addConference(p))
+	    return false;
+    }
+    */
+
+    if (!addConference(p))
+	return false;
+
+    api_execute(handle, "lua gen_conference.lua");
+    api_execute(handle, "reloadxml");
+
     // Hide the window. Save some settings
     Client::self()->setVisible(wnd->toString(),false);
 
@@ -8280,7 +8617,8 @@ bool DefaultLogic::saveServerAccount(NamedList* params, Window* wnd)
 }
 
 
-// Add/edit an account
+
+// Add an server account
 bool DefaultLogic::newAccounts(const String* account, NamedList* params,
     Window* wnd)
 {
@@ -8293,7 +8631,6 @@ bool DefaultLogic::newAccounts(const String* account, NamedList* params,
 
     for (const String* par = s_accParameters; !par->null(); par++)
 	params->setParam(*par, "");
-    params->setParam("username", "");
 
     params->setParam("title", "Add account");
 
@@ -8301,8 +8638,7 @@ bool DefaultLogic::newAccounts(const String* account, NamedList* params,
 }
 
 
-// Called when the user wants to add an account or edit an existing one
-// Add/edit an account
+// Called when the user wants to edit an existing account from server
 bool DefaultLogic::editAccounts(const String* account, NamedList* params,
     Window* wnd)
 {
@@ -8323,9 +8659,9 @@ bool DefaultLogic::editAccounts(const String* account, NamedList* params,
 
     const String& acc = a->toString();
 
-    for (const String* par = s_accParameters; !par->null(); par++)
+    for (const String* par = s_accParameters; !par->null(); par++) {
 	params->setParam(*par, a->params().getValue(*par));
-    params->setParam("username", acc.c_str());
+    }
 
     params->setParam("title", ("Edit account: " + acc).c_str());
     params->setParam("context", acc);
@@ -8333,68 +8669,6 @@ bool DefaultLogic::editAccounts(const String* account, NamedList* params,
     return Client::openPopup(s_wndAccounts, params);
 }
 
-int SocketService_open(const char * address)
-{
-    int s_sockfd = 0;
-
-    s_sockfd = socket(AF_INET , SOCK_STREAM , 0);
-    if (s_sockfd == -1){
-	fprintf(stderr, "Socket socket() failed: %s\n", strerror(errno));
-        return -1;
-    }
-
-    struct sockaddr_in info;
-    bzero(&info, sizeof(info));
-
-    info.sin_family = AF_INET;
-    info.sin_port = htons(DEFAULT_PROT);
-
-    if (inet_pton(AF_INET, address, &info.sin_addr) <= 0) {  
-	fprintf(stderr, "Socket inet_pton() failed: %s\n", strerror(errno));
-        return -1;
-    }  
-
-    int err = connect(s_sockfd, (struct sockaddr *)&info, sizeof(info));
-    if (err == -1){
-	fprintf(stderr, "Socket connect() failed: %s\n", strerror(errno));
-        return -1;
-    }
-
-    return s_sockfd;
-}
-
-void SocketService_close(const int s_sockfd)
-{
-    if (s_sockfd < 0) {
-	return;
-    }
-
-    close(s_sockfd);
-}
-
-int SocketService_request(const int socket, int msgType, SHAREDPACKET * inBuffer, SHAREDPACKET * outBuffer)
-{
-    int retBytes;
-
-    //Send a message to server
-    inBuffer->message = msgType;
-    retBytes = send(socket, (void *)inBuffer, sizeof(inBuffer->message), 0);
-    if (retBytes == -1){
-	fprintf(stderr, "Socket send() failed: %s\n", strerror(errno));
-        return -1 ;
-    }
-
-    retBytes = recv(socket, (void *)outBuffer, sizeof(SHAREDPACKET), 0);
-    if (retBytes == -1){
-	fprintf(stderr, "Socket recv() failed: %s\n", strerror(errno));
-        return -1;
-    }
-    if (outBuffer->message == 21) {
-	return -1;
-    }
-
-    return 0;
-}
 
 // Handle user.notify messages. Restart the wizard if the operating account is offline
 // Return true if handled
@@ -8408,73 +8682,21 @@ bool DefaultLogic::handleLoginNotify(const String& account, bool registered, con
     if (!Client::self()->getVisible(YSTRING("logwindow")))
 	return false;
 
-    int status = 0;
-
-    char remoteServer[16] = {'\0'};
-    memcpy(remoteServer, account.substr(account.find('@') + 1).c_str(), 16);
-
     Window* window = Client::self()->getWindow(YSTRING("logwindow"));
 
-    if (registered) {
-	//socketHandle = SocketService_open(account.substr(account.find('@') + 1).c_str());
-	socketHandle = SocketService_open(remoteServer);
-	if (socketHandle == -1) {
-	    SocketService_close(socketHandle);
-	    m_accounts->removeAccount(account);
-	    showError(window, "Login Account registered failure!");
-	    return false;
-	}
-
-	SHAREDPACKET inPackets;
-	SHAREDPACKET outPackets;
-
-	status = SocketService_request(socketHandle, 1, &inPackets, &outPackets);
-	if (status == -1) {
-	    SocketService_close(socketHandle);
-	    m_accounts->removeAccount(account);
-	    showError(window, "Login Account registered failure!");
-	    return false;
-	}
-
-	// Load the accounts file and notify logics
-	s_server = Engine::configFile("server_accounts",true);
-	s_server.writeBuffer(outPackets.buffer, 10240);
-	s_server.load();
-
-	unsigned int n = s_server.sections();
-	for (unsigned int i = 0; i < n; i++) {
-	    NamedList* sect = s_server.getSection(i);
-	    if (sect == NULL)
-		continue;
-	    loadServerAccount(*sect, false, false);
-	    /*
-	    for (ObjList* o = s_logics.skipNull(); o; o = o->skipNext()) {
-		ClientLogic* logic = static_cast<ClientLogic*>(o->get());
-		if (logic->loadServerAccount(*sect, false, false))
-		    break;
-	    }
-	    */
-	}
-
-	/*
-	memset(&inPackets, 0, sizeof(inPackets));
-	memset(&outPackets, 0, sizeof(outPackets));
-	*/
-
-	Client::self()->setVisible(YSTRING("logwindow"), false);
-	Client::self()->setVisible(YSTRING("mainwindow"),true,true);
-	return true;
-    }
-    else {
+    if (!registered) {
 	showError(window, "Login Account registered failure!");
 	m_accounts->removeAccount(account);
 	return false;
     }
 
+    Client::self()->setVisible(YSTRING("logwindow"), false);
+    Client::self()->setVisible(YSTRING("mainwindow"),true,true);
+
     return true;
 }
 
-// Called when the user wants to save account data
+// Called when the user wants to login account data
 bool DefaultLogic::handleLoginAccount(NamedList* params, Window* wnd)
 {
     if (!(Client::valid() && wnd))
@@ -8486,6 +8708,34 @@ bool DefaultLogic::handleLoginAccount(NamedList* params, Window* wnd)
     NamedList accountInfo("");
     if (!getLogAccount(wnd, accountInfo))
 	return false;
+
+
+    esl_global_set_default_logger(ESL_LOG_LEVEL_INFO);
+
+    String user =  accountInfo.getValue(YSTRING("username"));
+    String password =  accountInfo.getValue(YSTRING("password"));
+    String server =  accountInfo.getValue(YSTRING("server"));
+
+    /* Make a connection to the database */
+    conn = PQsetdbLogin(server,
+	    "5432", NULL, NULL, "freeswitch", user, password);
+    /* Check to see that the backend connection was successfully made */
+    if (PQstatus(conn) != CONNECTION_OK) {
+	showError(wnd, PQerrorMessage(conn));
+	PQfinish(conn);
+	return false;
+    }
+
+    if (esl_connect(handle, (const char *)server, 8021, NULL, "ClueCon") != ESL_SUCCESS) {
+	showError(wnd, "Error connectiong Freeswitch");
+	PQfinish(conn);
+	return false;
+    }
+
+    Client::self()->setVisible(YSTRING("logwindow"), false);
+    Client::self()->setVisible(YSTRING("mainwindow"),true,true);
+
+    return true;
 
     // Build account. Start login this account
     ClientAccount* account = new ClientAccount(accountInfo);
@@ -10405,6 +10655,12 @@ bool DefaultLogic::initializedClient()
 	if (a.toBoolean(true))
 	    Client::self()->setActive(wMain->id(),true,wMain);
     }
+
+    handle = (esl_handle_t *)malloc(sizeof(esl_handle_t));
+    if (handle == NULL) {
+	return false;
+    }
+
     return false;
 }
 
@@ -10416,7 +10672,16 @@ void DefaultLogic::exitingClient()
     if (!Client::valid())
 	return;
 
-    SocketService_close(socketHandle);
+    if (conn) {
+	Debug(ClientDriver::self(), DebugNote,
+		"Release connection database %p", conn);
+	PQfinish(conn);
+    }
+
+    if (handle) {
+	esl_disconnect(handle);
+	free(handle);
+    }
 
     // Avoid open account add the next time we start if the user closed the window
     if (!Client::self()->getVisible(s_accWizard->toString()))
@@ -10773,7 +11038,26 @@ bool DefaultLogic::deleteItem(const String& list, const String& item, Window* wn
     if (list == s_accountsList) {
 	if (context)
 	    return showConfirm(wnd,"Delete account '" + item + "'?",context);
-	return delServerAccount(item,wnd);
+
+	bool ok = delServerAccount(item,wnd);
+
+	api_execute(handle, "lua gen_directory.lua");
+	api_execute(handle, "reloadxml");
+
+	return ok;
+    }
+    if (list == s_conferenceList) {
+	if (context)
+	    return showConfirm(wnd,"Delete conference '" + item + "'?",context);
+
+	bool ok = delConference(item, wnd);
+
+	/*
+	api_execute(handle, "lua gen_conference.lua");
+	api_execute(handle, "reloadxml");
+	*/
+
+	return ok;
     }
     if (list == s_logList) {
 	if (context)

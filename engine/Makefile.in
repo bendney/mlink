@@ -15,13 +15,14 @@ LIBTHR:= @THREAD_LIB@
 INCLUDES := -I.. -I@top_srcdir@
 CFLAGS := @CFLAGS@ @MODULE_CFLAGS@ @INLINE_FLAGS@
 CPPFLAGS := @CFLAGS@ @MODULE_CPPFLAGS@ @INLINE_FLAGS@
-LDFLAGS:= @LDFLAGS@
+LDFLAGS:= @LDFLAGS@ -lpq
 SONAME_OPT := @SONAME_OPT@
 LDCONFIG:=true
 OBJCFLAGS := @OBJCFLAGS@
 
 MKDEPS := ../config.status
 YLIB:= libyate.so.@PACKAGE_VERSION@
+FINC:= -I@top_srcdir@/engine/include
 CINC := @top_srcdir@/yateclass.h @top_srcdir@/yatemime.h
 EINC := $(CINC) @top_srcdir@/yatengine.h
 PINC := $(EINC) @top_srcdir@/yatephone.h
@@ -35,8 +36,9 @@ CLSOBJS := TelEngine.o ObjList.o HashList.o Mutex.o Thread.o Socket.o Resolver.o
 ENGOBJS := Configuration.o Message.o Engine.o Plugin.o
 TELOBJS := DataFormat.o Channel.o
 CLIOBJS := Client.o ClientLogic.o
+ESLOBJS := esl.o esl_event.o esl_threadmutex.o esl_config.o esl_json.o esl_buffer.o cJSON.o cJSON_Utils.o
 
-LIBOBJS := $(CLSOBJS) $(ENGOBJS) $(TELOBJS) $(CLIOBJS)
+LIBOBJS := $(CLSOBJS) $(ENGOBJS) $(TELOBJS) $(CLIOBJS) $(ESLOBJS)
 CLEANS = $(LIBOBJS) core
 CCOMPILE = $(CC) $(DEFS) $(DEBUG) $(INCLUDES) $(CFLAGS)
 COMPILE = $(CXX) $(DEFS) $(DEBUG) $(INCLUDES) $(CPPFLAGS)
@@ -121,7 +123,7 @@ Client.o: @srcdir@/Client.cpp $(MKDEPS) $(CLINC)
 	$(COMPILE) -c $<
 
 ClientLogic.o: @srcdir@/ClientLogic.cpp $(MKDEPS) $(CLINC)
-	$(COMPILE) -c $<
+	$(COMPILE) $(FINC) -c $<
 
 String.o: @srcdir@/String.cpp $(MKDEPS) $(CINC)
 	$(COMPILE) $(REGEX_INC) -c $<
@@ -134,6 +136,10 @@ MacOSXUtils.o: @top_srcdir@/engine/macosx/MacOSXUtils.mm $(MKDEPS)
 
 %.o: @srcdir@/%.cpp $(MKDEPS) $(EINC)
 	$(COMPILE) -c $<
+
+%.o: @top_srcdir@/engine/esl/%.c $(MKDEPS)
+	$(CCOMPILE) -DSTDC_HEADERS $(FINC) -c $<
+
 
 Makefile: @srcdir@/Makefile.in $(MKDEPS)
 	cd .. && ./config.status

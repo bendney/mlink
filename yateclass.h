@@ -137,6 +137,7 @@ typedef unsigned long in_addr_t;
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <libpq-fe.h>
 
 /**
  * Non-Windows definitions for commonly used types
