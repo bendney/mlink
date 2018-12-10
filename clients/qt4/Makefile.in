@@ -13,7 +13,7 @@ QT4_INC_NET := @QT4_INC_NET@
 QT4_LIB_NET := @QT4_LIB_NET@
 DEFS:=
 
-INCLUDES:=-I. -I@srcdir@ -I@top_srcdir@ $(QT4_INC)
+INCLUDES:=-I. -I@srcdir@ -I@top_srcdir@ $(QT4_INC) -I/usr/include/postgresql
 CFLAGS := @CFLAGS@ @MODULE_CPPFLAGS@ @INLINE_FLAGS@
 LDFLAGS:= @LDFLAGS@
 SONAME_OPT := @SONAME_OPT@

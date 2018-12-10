@@ -11,11 +11,11 @@ SED := sed
 DEFS :=
 LIBENG:=
 LIBAUX:= @DLOPEN_LIB@ @LIBS@
-LIBTHR:= @THREAD_LIB@
-INCLUDES := -I.. -I@top_srcdir@
+LIBTHR:= @THREAD_LIB@ -lpq
+INCLUDES := -I.. -I@top_srcdir@ -I /usr/include/postgresql
 CFLAGS := @CFLAGS@ @MODULE_CFLAGS@ @INLINE_FLAGS@
 CPPFLAGS := @CFLAGS@ @MODULE_CPPFLAGS@ @INLINE_FLAGS@
-LDFLAGS:= @LDFLAGS@ -lpq
+LDFLAGS:= @LDFLAGS@
 SONAME_OPT := @SONAME_OPT@
 LDCONFIG:=true
 OBJCFLAGS := @OBJCFLAGS@
@@ -65,7 +65,7 @@ prefix = @prefix@
 exec_prefix = @exec_prefix@
 
 bindir = @bindir@
-libdir = @libdir@
+libdir = @libdir@ /usr/lib/x86_64-linux-gnu/
 incdir = @includedir@/yate
 moddir = @libdir@/yate
 

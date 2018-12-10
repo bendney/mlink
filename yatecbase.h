@@ -27,6 +27,7 @@
 #endif
 
 #include <yatephone.h>
+#include <libpq-fe.h>
 
 /**
  * Holds all Telephony Engine related classes.
