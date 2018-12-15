@@ -825,7 +825,7 @@ static const String s_confParameters[] = {
 };
 // Common server account parameters (protocol independent)
 static const String s_accParameters[] = {
-    "dtmfmode", "qualify", "username", "secret", "grade", ""
+    "username", "secret", "dtmfmode", "qualify", "grade", ""
 };
 
 static esl_handle_t * handle;
@@ -7111,7 +7111,7 @@ bool DefaultLogic::action(Window* wnd, const String& name, NamedList* params)
     // Handle show window actions
     if (name.startsWith("action_show_")) {
 	Debug(ClientDriver::self(), DebugNote, "-------------------------------------------");
-	if (name.substr(12) == YSTRING("accountsList")) {
+	if (name.substr(12) == YSTRING("accountslist")) {
 	    loadServerAccount(false, false);
 	}
 	else if (name.substr(12) == YSTRING("conferencelist")) {
@@ -8246,14 +8246,14 @@ bool DefaultLogic::addServerAccount(const NamedList& account)
 
     Debug(ClientDriver::self(), DebugNote, 
 	    "INSERT INTO userinfo VALUES(%s, %s, %s, %s, %s)",
-	    (const char *)dtmfmode, (const char *)qualify,
 	    (const char *)user, (const char *)secret,
+	    (const char *)dtmfmode, (const char *)qualify,
 	    (const char *)grade);
 
     snprintf(cmd_str, sizeof(cmd_str),
 	    "INSERT INTO userinfo VALUES('%s', '%s', '%s', '%s', '%s')",
-	    (const char *)dtmfmode, (const char *)qualify,
 	    (const char *)user, (const char *)secret,
+	    (const char *)dtmfmode, (const char *)qualify,
 	    (const char *)grade);
     res = PQexec(conn, cmd_str);
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
@@ -8326,7 +8326,7 @@ bool DefaultLogic::editServerAccount(const NamedList& account, bool save,
     String grade = newAccount->params().getValue("grade");
 
     snprintf(cmd_str, sizeof(cmd_str), 
-	    "UPDATE userinfo SET dtmfmode='%s', qualify='%s', grade='%s', secret='%s'  WHERE username='%s'",
+	    "UPDATE userinfo SET dtmf='%s', qualify='%s', grade='%s', password='%s'  WHERE username='%s'",
 	    (const char *)dtmfmode, (const char *)qualify,
 	    (const char *)grade, (const char *)secret,
 	    (const char *)user);
