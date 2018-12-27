@@ -8709,34 +8709,6 @@ bool DefaultLogic::handleLoginAccount(NamedList* params, Window* wnd)
     if (!getLogAccount(wnd, accountInfo))
 	return false;
 
-
-    esl_global_set_default_logger(ESL_LOG_LEVEL_INFO);
-
-    String user =  accountInfo.getValue(YSTRING("username"));
-    String password =  accountInfo.getValue(YSTRING("password"));
-    String server =  accountInfo.getValue(YSTRING("server"));
-
-    /* Make a connection to the database */
-    conn = PQsetdbLogin(server,
-	    "5432", NULL, NULL, "freeswitch", user, password);
-    /* Check to see that the backend connection was successfully made */
-    if (PQstatus(conn) != CONNECTION_OK) {
-	showError(wnd, PQerrorMessage(conn));
-	PQfinish(conn);
-	return false;
-    }
-
-    if (esl_connect(handle, (const char *)server, 8021, NULL, "ClueCon") != ESL_SUCCESS) {
-	showError(wnd, "Error connectiong Freeswitch");
-	PQfinish(conn);
-	return false;
-    }
-
-    Client::self()->setVisible(YSTRING("logwindow"), false);
-    Client::self()->setVisible(YSTRING("mainwindow"),true,true);
-
-    return true;
-
     // Build account. Start login this account
     ClientAccount* account = new ClientAccount(accountInfo);
     if (!m_accounts->appendAccount(account)) {

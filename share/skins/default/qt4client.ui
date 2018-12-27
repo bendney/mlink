@@ -3014,20 +3014,6 @@ QTextEdit {
     <string>Shared Files</string>
    </property>
   </action>
-  <action name="action_show_accountslist">
-   <property name="icon">
-    <iconset>
-     <normaloff>user_menu.png</normaloff>user_menu.png</iconset>
-   </property>
-   <property name="text">
-    <string>User Managerment</string>
-   </property>
-  </action>
-  <action name="action_show_conferencelist">
-   <property name="text">
-    <string>Conference</string>
-   </property>
-  </action>
   <zorder>menubar</zorder>
   <zorder>label_7</zorder>
   <zorder>frame_messages</zorder>
