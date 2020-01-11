@@ -103,6 +103,7 @@
       <addaction name="messages_show"/>
       <addaction name="action_show_accountslist"/>
       <addaction name="action_show_conferencelist"/>
+      <addaction name="action_show_cdr"/>
      </widget>
      <widget class="QMenu" name="menuFriends">
       <property name="title">
@@ -3026,6 +3027,11 @@ QTextEdit {
   <action name="action_show_conferencelist">
    <property name="text">
     <string>Conference</string>
+   </property>
+  </action>
+  <action name="action_show_cdr">
+   <property name="text">
+    <string>Call Detail</string>
    </property>
   </action>
   <zorder>menubar</zorder>

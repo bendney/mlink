@@ -7117,6 +7117,10 @@ bool DefaultLogic::action(Window* wnd, const String& name, NamedList* params)
 	else if (name.substr(12) == YSTRING("conferencelist")) {
 	    loadConferenceList(false, false);
 	}
+	else if (name.substr(12) == YSTRING("cdr")) {
+	    loadCallDetailRecord(false, false);
+	}
+
 	Client::self()->setVisible(name.substr(12),true,true);
     }
 #if 0
@@ -8075,8 +8079,8 @@ bool DefaultLogic::loadConferenceList(bool login, bool save)
     /* next, print out the rows */
     for (i = 0; i < PQntuples(res); i++) {
 	for (j = 0; j < nFields; j++) {
-	    confinfo.setParam(s_confParameters[j], PQgetvalue(res, i, j));
-	    confinfo.assign(confinfo.getValue(YSTRING("confnum")));
+	    //confinfo.setParam(s_confParameters[j], PQgetvalue(res, i, j));
+	    //confinfo.assign(confinfo.getValue(YSTRING("confnum")));
 	    printf("%-15s", PQgetvalue(res, i, j));
 	}
 	printf("\n");
@@ -8106,6 +8110,81 @@ bool DefaultLogic::loadConferenceList(bool login, bool save)
 	Client::self()->updateTableRow(s_conferenceList, conference->toString(), &p);
 	// Make sure the account is selected in accounts list
 	Client::self()->setSelect(s_conferenceList, conference->toString());
+    }
+    PQclear(res);
+
+    TelEngine::destruct(conference);
+
+    return true;
+
+}
+
+// Load call detail record
+bool DefaultLogic::loadCallDetailRecord(bool login, bool save)
+{
+    DDebug(ClientDriver::self(),DebugAll,"Logic(%s) loadCallDetailRecord(%s,%s)",
+	toString().c_str(),String::boolText(login),String::boolText(save));
+
+	Debug(ClientDriver::self(), DebugNote, "loadCallDetailRecord--------------------------------");
+    if (!Client::valid())
+	return false;
+
+    PGresult   *res;
+    int nFields;
+    int i, j;
+    ClientAccount* conference = 0;
+    bool appendStatus = true;
+    NamedList confinfo("");
+
+    res = PQexec(conn, "SELECT * FROM cdr");
+    if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+	Debug(ClientDriver::self(), DebugWarn,
+		"Fetch all data from database failed %s", PQerrorMessage(conn));
+	PQclear(res);
+	PQfinish(conn);
+    }
+
+    /* first, print out the attribute names */
+    nFields = PQnfields(res);
+    for (i = 0; i < nFields; i++)
+	printf("%-15s", PQfname(res, i));
+    printf("\n\n");
+
+    /* next, print out the rows */
+    for (i = 0; i < PQntuples(res); i++) {
+	for (j = 0; j < nFields; j++) {
+	    //confinfo.setParam(s_confParameters[j], PQgetvalue(res, i, j));
+	    //confinfo.assign(confinfo.getValue(YSTRING("confnum")));
+	    printf("%-15s", PQgetvalue(res, i, j));
+	}
+	printf("\n");
+#if 0
+	conference = a_accounts->findAccount(confinfo, true);
+	if (conference) {
+	    Debug(ClientDriver::self(), DebugWarn, "Skip load an existing conference!");
+	    continue;
+	}
+
+	// append conference to a_conferences
+	conference = new ClientAccount(confinfo);
+
+	appendStatus = a_conferences->appendAccount(conference);
+	if (appendStatus == false) {
+	    Debug(ClientDriver::self(),DebugNote,
+		    "Failed to append duplicate confinfo '%s'", conference->toString().c_str());
+	    continue;
+	}
+
+	// Update conference list
+	NamedList p("");
+	p.addParam("check:enabled", String::boolText(false));
+	p.addParam("conference", conference->toString());
+	p.addParam("status", conference->params().getValue("mode"));
+
+	Client::self()->updateTableRow(s_conferenceList, conference->toString(), &p);
+	// Make sure the account is selected in accounts list
+	Client::self()->setSelect(s_conferenceList, conference->toString());
+#endif
     }
     PQclear(res);
 

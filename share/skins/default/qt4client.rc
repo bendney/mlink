@@ -87,6 +87,10 @@ description=conference.ui
 enabled=true
 description=conferencelist.ui
 
+[cdr]
+enabled=true
+description=cdr.ui
+
 [accountwizard]
 enabled=true
 description=accountwizard.ui

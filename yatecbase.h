@@ -2851,6 +2851,8 @@ public:
 	{ return false; }
     virtual bool loadConferenceList(bool login, bool save)
 	{ return false; }
+    virtual bool loadCallDetailRecord(bool login, bool save)
+	{ return false; }
 
     /**
      * Login/logout an account
@@ -3385,6 +3387,7 @@ public:
     virtual bool updateAccount(const NamedList& account, bool login, bool save);
     virtual bool loadServerAccount(bool login, bool save);
     virtual bool loadConferenceList(bool login, bool save);
+    virtual bool loadCallDetailRecord(bool login, bool save);
 
     /**
      * Login/logout an account
