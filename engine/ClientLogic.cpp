@@ -7959,12 +7959,12 @@ bool api_execute(esl_handle_t * handle, const char * argv_command)
 
 
 // Retrieve login account data from UI
-static bool getLogAccount(Window* w, NamedList& p)
+static bool getLogAccount(Window* w, NamedList& p, String proto)
 {
     if (!Client::valid())
 	return false;
 
-    String proto = s_sip;
+    //String proto = s_sip;
     String username;
     String password;
     String host;
@@ -8704,28 +8704,58 @@ bool DefaultLogic::handleLoginAccount(NamedList* params, Window* wnd)
 
     if (!m_accounts)
 	return false;
-
-    NamedList accountInfo("");
-    if (!getLogAccount(wnd, accountInfo))
+#if 1
+    // Get sip account information from ui
+    NamedList sipAccount("");
+    if (!getLogAccount(wnd, sipAccount, s_sip))
 	return false;
 
-    // Build account. Start login this account
-    ClientAccount* account = new ClientAccount(accountInfo);
-    if (!m_accounts->appendAccount(account)) {
+    // Build sip account. Start login this sip account
+    ClientAccount* sip_account = new ClientAccount(sipAccount);
+    if (!m_accounts->appendAccount(sip_account)) {
 	showAccDupError(wnd);
-	TelEngine::destruct(account);
+	TelEngine::destruct(sip_account);
 	return false;
     }
 
-    setAccountContact(account);
-    Message* message = userLogin(account, true);
-    checkLoadModule(&account->params());
-    addAccPendingStatus(*message, account);
-    message->addParam("send_presence", String::boolText(false));
-    message->addParam("request_roster", String::boolText(false));
-    account->resource().m_status = ClientResource::Connecting;
-    TelEngine::destruct(account);
-    Engine::enqueue(message);
+    //Enqueue sip account loging message to list
+    setAccountContact(sip_account);
+    Message* sip_message = userLogin(sip_account, true);
+    checkLoadModule(&sip_account->params());
+    addAccPendingStatus(*sip_message, sip_account);
+    sip_message->addParam("send_presence", String::boolText(false));
+    sip_message->addParam("request_roster", String::boolText(false));
+    sip_account->resource().m_status = ClientResource::Connecting;
+
+    TelEngine::destruct(sip_account);
+    Engine::enqueue(sip_message);
+#else
+
+    // Get sip account information from ui
+    NamedList jabberAccount("");
+    if (!getLogAccount(wnd, jabberAccount, s_jabber))
+	return false;
+
+    // Build jabber account. Start login this sip account
+    ClientAccount* jabber_account = new ClientAccount(jabberAccount);
+    if (!m_accounts->appendAccount(jabber_account)) {
+	showAccDupError(wnd);
+	TelEngine::destruct(jabber_account);
+	return false;
+    }
+
+    //Enqueue jabber account loging message to list
+    setAccountContact(jabber_account);
+    Message* jabber_message = userLogin(jabber_account, true);
+    checkLoadModule(&jabber_account->params());
+    addAccPendingStatus(*jabber_message, jabber_account);
+    jabber_message->addParam("send_presence", String::boolText(false));
+    jabber_message->addParam("request_roster", String::boolText(false));
+    jabber_account->resource().m_status = ClientResource::Connecting;
+
+    TelEngine::destruct(jabber_account);
+    Engine::enqueue(jabber_message);
+#endif
 
     return true;
 }
